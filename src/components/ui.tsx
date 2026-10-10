@@ -1,0 +1,6 @@
+import type { ReactNode } from "react";
+import { LoaderCircle, BriefcaseBusiness } from "lucide-react";
+export function Brand() { return <span className="flex items-center gap-2.5 text-xl font-bold tracking-tight"><span className="rounded-xl bg-indigo-600 p-2 text-white"><BriefcaseBusiness size={20}/></span>JobApply<span className="text-indigo-600">.</span></span>; }
+export function Loading({ children = "Loading..." }: { children?: ReactNode }) { return <p role="status" className="flex items-center gap-2 py-8 text-sm text-slate-500"><LoaderCircle size={18} className="animate-spin"/>{children}</p>; }
+export function Feedback({ error, notice }: { error?: string; notice?: string }) { return <>{error && <p role="alert" className="mb-5 rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">{error}</p>}{notice && <p role="status" className="mb-5 rounded-xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-700">{notice}</p>}</>; }
+export function Heading({ title, subtitle, action }: { title: string; subtitle: string; action?: ReactNode }) { return <div className="mb-8 flex flex-wrap items-center justify-between gap-4"><div><h1 className="text-3xl font-semibold tracking-tight text-slate-900">{title}</h1><p className="mt-2 text-sm text-slate-500">{subtitle}</p></div>{action}</div>; }
