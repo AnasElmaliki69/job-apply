@@ -18,9 +18,9 @@ Follow README.md for the Supabase schema and local environment configuration.
 Before submitting a change, run:
 
 ```sh
+npm run build
 npm run typecheck
 npm test
-npm run build
 ```
 
 CI runs these checks on pull requests and pushes to `main` and `develop`.

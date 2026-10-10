@@ -30,6 +30,7 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci
+      # Build first so Next.js generates route types on a fresh checkout.
+      - run: npm run build
       - run: npm run typecheck
       - run: npm test
-      - run: npm run build
