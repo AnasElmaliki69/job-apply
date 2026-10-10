@@ -3,6 +3,13 @@
 Minimal job application assistant using Next.js App Router, TypeScript, Tailwind CSS,
 Supabase email/password Auth and database, and configurable Gemini / OpenAI analysis.
 
+## Development
+
+Version two is developed on `develop`; `main` retains the stable first version.
+Use feature branches and pull requests for upgrades. See [CONTRIBUTING.md](CONTRIBUTING.md)
+for the branch workflow and required checks. GitHub Actions runs TypeScript checks,
+tests and a production build once the workflow is pushed to GitHub.
+
 ## Local setup
 
 ### Gemini setup (selected in this local checkout)
