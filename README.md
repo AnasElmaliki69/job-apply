@@ -3,6 +3,101 @@
 Minimal job application assistant using Next.js App Router, TypeScript, Tailwind CSS,
 Supabase email/password Auth and database, and configurable Gemini / OpenAI analysis.
 
+## Development
+
+Version two is developed on `develop`; `main` retains the stable first version.
+Use feature branches and pull requests for upgrades. See [CONTRIBUTING.md](CONTRIBUTING.md)
+for the branch workflow and required checks. GitHub Actions runs TypeScript checks,
+tests and a production build once the workflow is pushed to GitHub.
+
+## Personal Board setup (existing and new Supabase projects)
+
+For an existing installation, **do not rerun `supabase/schema.sql`**. In your
+Supabase dashboard, open **SQL Editor → New query**, paste the complete contents
+of **`supabase/migrations/20261013_personal_board.sql`**, and click **Run**.
+Then run **`supabase/migrations/202610130001_board_card_delete.sql`** to enable owner-only
+card deletion. If Board is already installed, only this second migration is needed.
+Apply these files in the listed order when setting up a new database or rerunning
+all migrations; the base Board migration resets its table grants.
+This migration is additive and rerunnable. It adds `board_projects`, `board_cards`
+and `board_solutions` with indexes, ownership policies and update timestamps.
+It does not modify or remove your existing profiles, CVs or job applications.
+On a brand-new database, run `supabase/schema.sql` first, then this migration.
+
+After updating the project, run:
+
+```powershell
+npm install
+npm run dev
+```
+
+Open `http://localhost:3000`, sign in normally, and choose **Board** in the
+navigation. No additional environment variables, service-role key, AI provider,
+notification service or scheduled job is needed for Board operations.
+Until the migration is applied, Board shows a setup error with a retry button;
+the existing job-application pages continue to use their existing tables.
+
+### Using the Board
+
+Board remembers the current view, filters, expanded panels and scroll position
+when you return from a card. Unsaved quick-capture text and optional fields survive
+view changes and navigation. Drafts and workspace preferences use session storage,
+separately for each signed-in account, in the current browser tab; they are not
+saved to Supabase until you click Save card. Saving successfully or choosing
+Clear draft clears the draft. Closing the tab ends this storage. If browser storage
+is blocked, capture still works, but restoration across navigation may be unavailable.
+Quick type buttons let you choose Note, Idea, Task, Reminder, Problem or Solution
+without opening Optional details. Changing a view never reassigns an existing draft
+to a new project or type; the capture form shows where it will be saved.
+
+Application details has CV, Lettre de motivation and Progress shortcuts at the
+top. Copy letter copies the saved letter without making another AI call; if the
+browser denies clipboard access, the page explains how to copy the text manually.
+
+- Enter a title or a short thought and press Enter or **Save card**. The default
+  is an open note in General. Expand Optional details for type, category, project,
+  date or longer notes. Capture within a project defaults to that project; capture
+  in Problems defaults to a problem, and Upcoming defaults to a reminder.
+- Use **All**, **General**, **Problems**, **Upcoming**, project buttons and
+  **Archive**. Search title/body/category and combine type, category, project,
+  status and due-date filters. Upcoming includes overdue and future dated open
+  tasks/reminders, ordered by date. Undated reminders remain in All or General.
+- Open a card to edit it, move it to a project or General, mark it done/resolved,
+  or reopen it. Type remains fixed after creation to preserve problem relationships.
+- Open a problem to add any number of solutions. For each solution, record
+  what you tried, its result and whether it worked, partly worked, did not work,
+  or has not been tried. Marking a solution as worked does not automatically
+  resolve the problem. Archived solutions remain visible in the problem history.
+- Manage projects to create, rename, archive or restore one. Archiving a project
+  hides its navigation button; its cards remain accessible in All. Use View in
+  project management to browse an archived project, or move its cards elsewhere.
+- Archive preserves
+  their current content, attempts, outcomes and timestamps. This MVP does not keep
+  a separate revision for every text edit. Cards also have a **Delete** action on
+  Board and card details, with a second **Delete permanently** confirmation.
+  Deleting a problem permanently removes all its attached solutions and outcomes.
+  Projects and individual solutions still use archive/restore. RLS restricts card
+  deletion to the signed-in owner, and stale card edits block deletion until reloaded.
+
+All Board database operations use the existing signed-in browser Supabase client
+and RLS. Composite foreign keys ensure cards cannot reference another user's
+project and solutions cannot reference another user's card or a non-problem card.
+Saving also checks `updated_at` to reject stale edits from another tab.
+Data is private to each account, with no new AI calls or background notifications.
+
+### Verification
+
+```powershell
+npm run build
+npm run typecheck
+npm test
+```
+
+Board tests cover capture validation, date and combined filters, project/General
+views, completion/reopening, and migration/RLS behavior. The development-only
+PGlite dependency runs a local PostgreSQL engine with synthetic users to verify
+the SQL; tests do not read or modify your live Supabase database.
+
 ## Local setup
 
 ### Gemini setup (selected in this local checkout)
