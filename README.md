@@ -39,6 +39,21 @@ the existing job-application pages continue to use their existing tables.
 
 ### Using the Board
 
+Board remembers the current view, filters, expanded panels and scroll position
+when you return from a card. Unsaved quick-capture text and optional fields survive
+view changes and navigation. Drafts and workspace preferences use session storage,
+separately for each signed-in account, in the current browser tab; they are not
+saved to Supabase until you click Save card. Saving successfully or choosing
+Clear draft clears the draft. Closing the tab ends this storage. If browser storage
+is blocked, capture still works, but restoration across navigation may be unavailable.
+Quick type buttons let you choose Note, Idea, Task, Reminder, Problem or Solution
+without opening Optional details. Changing a view never reassigns an existing draft
+to a new project or type; the capture form shows where it will be saved.
+
+Application details has CV, Lettre de motivation and Progress shortcuts at the
+top. Copy letter copies the saved letter without making another AI call; if the
+browser denies clipboard access, the page explains how to copy the text manually.
+
 - Enter a title or a short thought and press Enter or **Save card**. The default
   is an open note in General. Expand Optional details for type, category, project,
   date or longer notes. Capture within a project defaults to that project; capture

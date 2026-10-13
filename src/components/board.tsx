@@ -5,6 +5,9 @@ import { Plus, Archive, Check, ArrowUpRight, SlidersHorizontal, ChevronDown } fr
 import { Feedback, Heading, Loading } from './ui';
 import { useBoard } from './use-board';
 import { DeleteBoardCard } from './delete-board-card';
+import { QuickCapture } from './quick-capture';
+import { useBoardMemory } from './use-board-memory';
+import { changeBoardView } from '@/lib/board-memory';
 import { cardInput, cardTypes, completionStatus, filterCards, localDate, projectInput, typeColors, type BoardCard, type BoardFilters, type BoardProject } from '@/lib/board';
 import { message } from '@/lib/schemas';
 
@@ -46,15 +49,18 @@ function ProjectRow({ project, busy, onSave, onView }: { project: BoardProject; 
 
 export default function Board() {
   const board = useBoard();
-  const [filters, setFilters] = useState<BoardFilters>({ view: 'all', project: '', search: '', type: '', category: '', status: '', due: '' });
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const boardMemory = useBoardMemory(board.userId, board.loading);
+  const { memory } = boardMemory;
+  const { filters, filtersOpen } = memory;
+  const setFilters = (change: (filters: BoardFilters) => BoardFilters) => boardMemory.update(value => ({ ...value, filters: change(value.filters) }));
+  const setFiltersOpen = (change: (open: boolean) => boolean) => boardMemory.update(value => ({ ...value, filtersOpen: change(value.filtersOpen) }));
   const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const [notice, setNotice] = useState(''); const [projectName, setProjectName] = useState('');
   async function act(operation: () => Promise<unknown>, notice: string) {
     if (busy) return false;
     setBusy(true); setError(''); setNotice('');
     try { await operation(); setNotice(notice); return true; } catch (err) { setError(message(err)); return false; } finally { setBusy(false); }
   }
-  function view(view: BoardFilters['view'], project = '') { setFiltersOpen(false); setFilters(previous => ({ ...previous, view, project, type: '', category: '', status: '', due: '', search: '' })); }
+  function view(view: BoardFilters['view'], project = '') { boardMemory.update(value => changeBoardView(value, view, project)); }
   const visible = filterCards(board.cards, filters);
   const categories = [...new Set(board.cards.map(card => card.category).filter(Boolean))].sort();
   const activeProjects = board.projects.filter(project => !project.archived_at);
@@ -67,10 +73,10 @@ export default function Board() {
     <Heading title="Board" subtitle="A place for your ideas, tasks, reminders and everyday problems."/>
     <Feedback error={error || board.error} notice={notice}/>
     {board.error && <button className="secondary" onClick={board.retry}>Retry loading board</button>}
-    {board.loading ? <Loading>Loading your board…</Loading> : !board.error && <>
-      <section className="card mb-6" aria-label="Quick capture"><CardForm key={`${filters.view}:${filters.project}`} projects={board.projects} defaultProject={filters.view === 'project' && !project?.archived_at ? filters.project : null} defaultType={filters.view === 'problems' ? 'problem' : filters.view === 'upcoming' ? 'reminder' : 'note'} busy={busy} onSave={input => act(() => board.createCard(input), 'Card saved.')}/></section>
+    {board.loading || !boardMemory.ready ? <Loading>Loading your board…</Loading> : !board.error && <>
+      <section className="card mb-6" aria-label="Quick capture"><QuickCapture projects={board.projects} draft={memory.draft} onChange={draft => boardMemory.update(value => ({ ...value, draft }))} open={memory.captureOpen} onOpen={captureOpen => boardMemory.update(value => ({ ...value, captureOpen }))} defaultProject={filters.view === 'project' && !project?.archived_at ? filters.project : null} defaultType={filters.view === 'problems' ? 'problem' : filters.view === 'upcoming' ? 'reminder' : 'note'} busy={busy} onSave={input => act(() => board.createCard(input), 'Card saved.')}/></section>
       <nav aria-label="Board views" className="mb-5 flex flex-wrap gap-2">{(['all','general','problems','upcoming','archive'] as const).map(item => <button key={item} aria-pressed={filters.view === item} className={filters.view === item ? 'button' : 'secondary'} onClick={() => view(item)}>{item === 'all' ? 'All' : item === 'archive' ? 'Archive' : item[0].toUpperCase() + item.slice(1)}</button>)}{activeProjects.map(project => <button key={project.id} aria-pressed={filters.view === 'project' && filters.project === project.id} className={filters.view === 'project' && filters.project === project.id ? 'button' : 'secondary'} onClick={() => view('project', project.id)}>{project.name}</button>)}</nav>
-      <details className="mb-5 rounded-xl border border-slate-200 bg-white px-4 py-3"><summary className="cursor-pointer text-sm font-medium text-slate-600">Manage projects</summary><p className="my-3 text-sm text-slate-500">Archiving hides a project from navigation. Its cards remain in All and keep their project association.</p>
+      <details open={memory.projectsOpen} onToggle={event => { const projectsOpen = event.currentTarget.open; boardMemory.update(value => ({ ...value, projectsOpen })); }} className="mb-5 rounded-xl border border-slate-200 bg-white px-4 py-3"><summary className="cursor-pointer text-sm font-medium text-slate-600">Manage projects</summary><p className="my-3 text-sm text-slate-500">Archiving hides a project from navigation. Its cards remain in All and keep their project association.</p>
         <form className="mb-4 flex flex-col gap-2 sm:flex-row" onSubmit={async event => { event.preventDefault(); if (await act(() => board.saveProject(projectInput.parse(projectName)), 'Project created.')) setProjectName(''); }}><label className="label flex-1">New project<input className="field" value={projectName} onChange={event => setProjectName(event.target.value)} required maxLength={100} placeholder="Studies, home renovation…"/></label><button className="button self-end" disabled={busy}>Create project</button></form>
         <div className="space-y-2">{board.projects.map(project => <ProjectRow key={`${project.id}:${project.updated_at}`} project={project} busy={busy} onSave={(name, record, archived) => act(() => board.saveProject(projectInput.parse(name), record, archived), 'Project updated.')} onView={() => view('project', project.id)}/>)}</div>
       </details>
@@ -95,10 +101,10 @@ export default function Board() {
       </section>
       {!visible.length ? <div className="card py-12 text-center"><h3 className="font-semibold">Nothing here yet</h3><p className="mt-2 text-sm text-slate-500">Capture a card above, switch views, or clear your filters.</p></div> : <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{visible.map(card => <article className="card flex min-w-0 flex-col" key={card.id}>
         <div className="flex flex-wrap items-center gap-2 text-xs"><span className={`rounded-full px-3 py-1 capitalize ${typeColors[card.type]}`}>{card.type}</span><span className="font-medium">{card.status === 'completed' ? 'Done' : card.status === 'resolved' ? 'Resolved' : card.type === 'problem' ? 'Open problem' : 'Open'}</span>{card.archived_at && <span>Archived</span>}</div>
-        <Link href={`/board/${card.id}`} className="my-4 flex items-start justify-between gap-2 font-semibold"><span className="break-words">{card.title}</span><ArrowUpRight size={17} className="shrink-0 text-slate-400"/></Link>
+        <Link href={`/board/${card.id}`} onClick={boardMemory.rememberScroll} className="my-4 flex items-start justify-between gap-2 font-semibold"><span className="break-words">{card.title}</span><ArrowUpRight size={17} className="shrink-0 text-slate-400"/></Link>
         {card.body && <p className="mb-4 line-clamp-3 whitespace-pre-wrap break-words text-sm text-slate-500">{card.body}</p>}
         <div className="mb-4 flex flex-wrap gap-2 text-xs text-slate-500">{card.category && <span>{card.category}</span>}<span>{board.projects.find(project => project.id === card.project_id)?.name ?? 'General'}</span>{card.due_date && <time dateTime={card.due_date} className={card.due_date < localDate() && card.status === 'open' ? 'font-semibold text-rose-700' : ''}>{card.due_date < localDate() && card.status === 'open' ? 'Overdue · ' : 'Due · '}{card.due_date}</time>}</div>
-        <div className="mt-auto flex flex-wrap gap-2"><Link className="secondary" href={`/board/${card.id}`}>Edit / details</Link><button className="secondary" disabled={busy} onClick={() => void act(() => board.updateCard(card, { status: completionStatus(card) }), 'Status updated.')}><Check size={14}/>{card.status !== 'open' ? 'Reopen' : card.type === 'problem' ? 'Resolve' : 'Done'}</button><button className="secondary" disabled={busy} onClick={() => void act(() => board.updateCard(card, { archived_at: card.archived_at ? null : new Date().toISOString() }), card.archived_at ? 'Card restored.' : 'Card archived. Find it in Archive.')}><Archive size={14}/>{card.archived_at ? 'Restore' : 'Archive'}</button></div>
+        <div className="mt-auto flex flex-wrap gap-2"><Link className="secondary" href={`/board/${card.id}`} onClick={boardMemory.rememberScroll}>Edit / details</Link><button className="secondary" disabled={busy} onClick={() => void act(() => board.updateCard(card, { status: completionStatus(card) }), 'Status updated.')}><Check size={14}/>{card.status !== 'open' ? 'Reopen' : card.type === 'problem' ? 'Resolve' : 'Done'}</button><button className="secondary" disabled={busy} onClick={() => void act(() => board.updateCard(card, { archived_at: card.archived_at ? null : new Date().toISOString() }), card.archived_at ? 'Card restored.' : 'Card archived. Find it in Archive.')}><Archive size={14}/>{card.archived_at ? 'Restore' : 'Archive'}</button></div>
         <div className="mt-3"><DeleteBoardCard card={card} busy={busy} onDelete={() => act(() => board.deleteCard(card), 'Card permanently deleted.')}/></div>
       </article>)}</div>}
     </>}
