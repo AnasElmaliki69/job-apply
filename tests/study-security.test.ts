@@ -1,0 +1,67 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { PGlite } from '@electric-sql/pglite';
+
+test('Study migration isolates users, conceals keys, grades attempts and clears reviewed mistakes on retry',async () => {
+  const db = new PGlite();
+  const a='11111111-1111-4111-8111-111111111111', b='22222222-2222-4222-8222-222222222222';
+  const subject='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', material='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  const questions=Array.from({ length:5 },(_,index) => ({ prompt:`Question ${index}`, options:['One','Two','Three','Four'],correctIndex:1,explanation:'Two is correct.',reviewTopic:`Topic ${index}`,evidence:'Two' }));
+  const as = async (id:string) => { await db.exec(`reset role; set role authenticated; select set_config('request.jwt.claim.sub','${id}',false)`); };
+  try {
+    await db.exec(`create role anon; create role authenticated; create schema auth; create table auth.users(id uuid primary key);
+      create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
+      grant usage on schema auth,public to authenticated,anon;
+      insert into auth.users values ('${a}'),('${b}');`);
+    await db.exec(readFileSync(new URL('../supabase/schema.sql',import.meta.url),'utf8'));
+    await db.exec(`insert into profiles(user_id,cv_text) values('${a}','Original CV'); insert into applications(user_id,job_title,company,job_offer_text,ai_analysis) values('${a}','Original','Company','Offer','{}');`);
+    const sql=readFileSync(new URL('../supabase/migrations/202610140002_study_quizzes.sql',import.meta.url),'utf8');
+    await db.exec(sql); await db.exec(sql);
+    assert.equal((await db.query('select * from applications')).rows.length,1);
+    assert.equal((await db.query<{cv_text:string}>('select cv_text from profiles')).rows[0].cv_text,'Original CV');
+    await as(a);
+    await db.query('insert into study_subjects(id,user_id,name) values($1,$2,$3)',[subject,a,'Biology']);
+    await db.query('insert into study_materials(id,user_id,subject_id,topic,content) values($1,$2,$3,$4,$5)',[material,a,subject,'Cells','Two. '.repeat(20)]);
+    await assert.rejects(db.query('insert into study_subjects(user_id,name) values($1,$2)',[b,'Spoof']),/row-level security/i);
+    const quiz=(await db.query<{id:string}>('select study_create_quiz($1,$2::jsonb) as id',[material,JSON.stringify(questions)])).rows[0].id;
+    const publicQuestions=(await db.query<{questions:unknown[]}>('select study_quiz_questions($1) as questions',[quiz])).rows[0].questions;
+    assert.equal(publicQuestions.length,5);
+    assert.deepEqual(Object.keys(publicQuestions[0] as object).sort(),['options','prompt']);
+    await assert.rejects(db.query('select questions from study_quizzes'),/permission denied/i);
+    assert.equal((await db.query('select id from study_quizzes')).rows.length,1);
+    await assert.rejects(db.query('select * from study_quizzes'),/permission denied/i);
+    assert.equal((await db.query('select * from study_attempts')).rows.length,0);
+    assert.equal((await db.query<{ok:boolean}>('select study_reserve_generation() as ok')).rows[0].ok,true);
+    assert.equal((await db.query<{ok:boolean}>('select study_reserve_generation() as ok')).rows[0].ok,false);
+    await assert.rejects(db.query('select * from study_generation_limits'),/permission denied/i);
+    await assert.rejects(db.query('select study_submit_attempt($1,gen_random_uuid(),$2::jsonb)',[quiz,'[1,1]']),/Answer every question/i);
+    await assert.rejects(db.query('select study_submit_attempt($1,gen_random_uuid(),$2::jsonb)',[quiz,'[1,1,1,1,"1"]']),/Invalid answer/i);
+    const attempt='cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+    const result=(await db.query<{result:{score:number;total:number;results:{selected:number|null;correct:boolean}[]}}>('select to_jsonb(study_submit_attempt($1,$2,$3::jsonb)) as result',[quiz,attempt,'[1,0,null,1,1]'])).rows[0].result;
+    assert.equal(result.score,3); assert.equal(result.total,5);
+    assert.equal(result.results[2].selected,null); assert.equal(result.results[2].correct,false);
+    assert.equal((await db.query('select * from study_attempts')).rows.length,1);
+    // Retrying the submission with the same ID cannot alter a saved score.
+    const repeated=(await db.query<{result:{score:number}}>('select to_jsonb(study_submit_attempt($1,$2,$3::jsonb)) as result',[quiz,attempt,'[1,1,1,1,1]'])).rows[0].result;
+    assert.equal(repeated.score,3);
+    assert.equal((await db.query<{items:unknown[]}>('select study_review_questions() as items')).rows[0].items.length,2);
+    await assert.rejects(db.query('update study_attempts set score=5'),/permission denied/i);
+    await assert.rejects(db.query('delete from study_materials'),/permission denied/i);
+    await as(b);
+    for (const table of ['study_subjects','study_materials','study_attempts']) assert.equal((await db.query(`select * from ${table}`)).rows.length,0);
+    assert.equal((await db.query('select id from study_quizzes')).rows.length,0);
+    assert.equal((await db.query<{questions:null}>('select study_quiz_questions($1) as questions',[quiz])).rows[0].questions,null);
+    assert.equal((await db.query<{items:unknown[]}>('select study_review_questions() as items')).rows[0].items.length,0);
+    await assert.rejects(db.query('select study_create_quiz($1,$2::jsonb)',[material,JSON.stringify(questions)]),/not found/i);
+    await assert.rejects(db.query('select study_submit_attempt($1,gen_random_uuid(),$2::jsonb)',[quiz,'[1,1,1,1,1]']),/not found/i);
+    await assert.rejects(db.query('insert into study_materials(user_id,subject_id,topic,content) values($1,$2,$3,$4)',[b,subject,'Foreign','Text '.repeat(20)]),/foreign key/i);
+    await as(a);
+    await db.query('select study_submit_attempt($1,gen_random_uuid(),$2::jsonb)',[quiz,'[1,1,1,1,1]']);
+    assert.equal((await db.query('select * from study_attempts')).rows.length,2);
+    assert.equal((await db.query<{items:unknown[]}>('select study_review_questions() as items')).rows[0].items.length,0);
+    await db.exec('reset role; set role anon;');
+    for (const table of ['study_subjects','study_materials','study_quizzes','study_attempts']) await assert.rejects(db.query(`select * from ${table}`),/permission denied/i);
+    for (const fn of ['study_review_questions()','study_reserve_generation()',`study_quiz_questions('${quiz}')`]) await assert.rejects(db.query(`select ${fn}`),/permission denied/i);
+  } finally { await db.close(); }
+});
