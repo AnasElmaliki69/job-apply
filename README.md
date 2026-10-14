@@ -331,6 +331,98 @@ Dependencies have been installed and package-lock.json is included. Use `npm ci`
 for reproducible installs. The dev/build scripts explicitly use Next.js's supported
 webpack bundler for compatibility with this Windows environment.
 
+## Study: self-testing quizzes
+
+This feature lives on `feature/study-quizzes`. It adds Study to desktop and mobile
+navigation. No course hosting or automatic generation is included.
+
+### Setup for an existing installation
+
+1. Open your existing Supabase project → SQL Editor → New query.
+2. Paste and run **`supabase/migrations/202610140002_study_quizzes.sql`** in full.
+   This additive, rerunnable migration creates `study_subjects`, `study_materials`,
+   `study_quizzes`, `study_attempts`, `study_generation_limits`, their indexes,
+   ownership policies and scoring functions. It does not modify existing job,
+   profile, Explore or Board tables. Do not rerun the base schema to add Study.
+   A new installation should first follow the original database setup above.
+3. Keep the existing Supabase URL and anon key in `.env.local`. Study uses the
+   signed-in user's JWT and never a service-role key.
+4. Set `GEMINI_API_KEY` server-side in `.env.local`. Study uses the same
+   `GEMINI_MODEL` as application analysis (default `gemini-3.5-flash-lite`).
+   No new provider or client-side secret is required. `AI_PROVIDER` does not switch
+   Study to OpenAI: this section specifically uses Gemini.
+5. Run `npm ci` if needed, then `npm run dev`. Restart after environment changes.
+   Open `http://localhost:3000/study` and sign in with your existing account.
+
+### Using Study
+
+- Add a subject, select it, then save a topic and 50–20,000 characters of notes,
+  excerpts or a summary. Material is saved independently of AI calls and retained
+  when generation fails. These saved records are immutable in this first version;
+  save a new material entry when you have revised notes.
+- Open saved material and choose 5 (default) or 10 questions. Click Generate quiz
+  explicitly. It makes one Gemini `generateContent` request, never automatic
+  background requests or retries. Generated questions and explanations are French.
+  The notes are sent to Gemini only for this explicit action.
+- Answer all questions, choosing “I'm not sure” when appropriate. Correct answers,
+  evidence excerpts and explanations are withheld until whole-quiz submission.
+  Supabase grades and saves the attempt atomically. A repeated submission with the
+  same attempt ID returns that existing score rather than duplicating history.
+- Retry this quiz loads the same saved questions, with no Gemini request. Previous
+  scores (latest 50) remain available on its quiz page. Changing answers requires a
+  new attempt; saved attempts cannot be edited.
+- Review again uses the latest submitted attempt for **each quiz**, showing wrong
+  and unsure answers. Check an answer locally for practice; this does not change a
+  score. Retry the full quiz to clear recovered questions from the review list.
+
+### Limits, privacy and validation
+
+Google's [current rate-limit documentation](https://ai.google.dev/gemini-api/docs/rate-limits)
+states that RPM, TPM and daily limits depend on the model and project tier, and
+apply per project, not per API key. Check **your active limits** in
+[Google AI Studio](https://aistudio.google.com/usage?timeRange=last-28-days&tab=rate-limit)
+before generating. Study and application analysis share that project's allowance.
+The public documentation does not reveal this installation's private quota.
+
+Study adds a database-backed 30-second generation cooldown per user (including
+failed generation attempts). This is a guard against repeated clicks, not an
+estimate of Google's allowance or a global spending cap. Both quiz sizes take one
+request, but 10 questions use more output tokens. Material is bounded to 20,000
+characters and output to 10,000 tokens. There is no auto-regeneration on failure.
+Provider 429, unavailable models, missing keys, invalid/truncated output and
+insufficient material produce actionable errors without showing upstream secrets.
+
+Structured output is validated for question count, four distinct options, answer
+index, duplicate questions and supporting excerpts found in the saved material.
+These checks do not guarantee factual correctness or perfect question quality;
+review the shown evidence against your notes.
+
+Answer keys are stored in `study_quizzes.questions` with no direct authenticated
+column read permission. `study_quiz_questions` returns prompts/options only.
+Authenticated users can read their own metadata and completed attempts; narrowly
+scoped database functions check `auth.uid()` before creating quizzes, scoring or
+returning review data. Composite foreign keys prevent cross-user relationships.
+Anonymous access is denied. No normal operation uses `SUPABASE_SERVICE_ROLE_KEY`.
+
+### Study verification
+
+Run `npm test`, `npm run typecheck`, and `npm run build`. Study tests cover real
+PostgreSQL migration reruns, preservation of existing data, RLS, hidden answer
+keys, server scoring, unsure answers, immutable/idempotent attempts, successful
+retries clearing review items, generation cooldowns, malformed AI output and
+mocked authenticated Gemini generation. Tests do not spend Gemini credits.
+
+Implementation verification: all 63 tests, TypeScript checks and the production
+build passed. The local production server reached Ready, but the browser connection
+to `/study` timed out in this environment. No live Supabase migration, authenticated
+browser walkthrough or real Gemini generation was performed in this session.
+
+For a live smoke test after setup: create a subject → save notes → generate five
+questions → submit with one wrong and one unsure answer → inspect score and
+explanations → open Review again → retry the saved quiz → confirm the previous
+score remains and that retrying sends no `/api/study/generate` request. Test a
+second account to confirm it cannot see your data.
+
 ## Official references
 
 - https://nextjs.org/docs/app/getting-started/installation
