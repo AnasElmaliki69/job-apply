@@ -43,7 +43,7 @@ export default function StudyMaterialPage({ id }: { id: string }) {
     <Heading title={material?.topic ?? 'Study material'} subtitle="Generate a new quiz, or retry a saved one with no AI request."/>
     <Feedback error={error}/>{error && <button className="secondary mb-4" disabled={busy} onClick={() => setReload(value => value+1)}>Reload material</button>}
     {loading ? <Loading/> : material && <div className="space-y-6">
-      <section className="card"><h2 className="font-semibold">Test yourself</h2><p className="mt-2 text-sm text-slate-500">One Gemini request per generation. Questions and explanations are in French. Answers stay hidden until you submit the whole quiz.</p>
+      <section className="card"><h2 className="font-semibold">Test yourself</h2><p className="mt-2 text-sm text-slate-500">One Gemini request per generation. New questions and explanations are in English. Answers stay hidden until you submit the whole quiz.</p>
         <div className="mt-5 flex flex-wrap items-end gap-3"><label className="label">Questions<select className="field" disabled={busy} value={count} onChange={event => setCount(Number(event.target.value))}><option value={5}>5 questions</option><option value={10}>10 questions</option></select></label><button className="button" disabled={busy} onClick={() => void generate()}>{busy ? 'Generating & saving…' : 'Generate quiz'}</button></div>
         {busy && <Loading>Your notes are safe. Generation can take up to 90 seconds…</Loading>}
         <p className="mt-4 text-xs text-slate-500">AI can make mistakes. Results include an excerpt from your notes so you can check the explanation. Add enough detail for distinct questions.</p>

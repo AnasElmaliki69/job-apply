@@ -2,7 +2,7 @@
 
 A personal workspace for job applications, everyday organization and self-testing.
 Built with Next.js App Router, TypeScript, Tailwind CSS, Supabase and Gemini.
-The interface is in English; generated CVs, cover letters and study quizzes are in French.
+The interface and newly generated study quizzes are in English. Generated CVs and cover letters are in French.
 
 This guide sets up the **`feature/study-quizzes` branch** on your own computer.
 It includes applications, Board, Explore offers and Study. These features may not
@@ -328,6 +328,8 @@ the database, including any copied into application offer text, as required.
 5. Read your score, correct answers, explanations and supporting excerpts.
 6. Use **Review again** for wrong/unsure questions, or retry a saved quiz and compare
    previous scores. Retrying uses no Gemini call.
+
+New quizzes, answer options, explanations and review-topic labels are generated in English, even from notes in another language. Supporting excerpts keep the source language. Previously saved quizzes keep their original text; generate a new quiz from the same material to use English.
 
 One explicit generation makes one Gemini request. A 30-second per-user cooldown
 limits repeated generation clicks; it is separate from Google's project-wide quota.
