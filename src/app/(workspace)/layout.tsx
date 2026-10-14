@@ -2,11 +2,11 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { LayoutDashboard, FileUser, Plus, LogOut, ArrowUpRight, StickyNote } from "lucide-react";
+import { LayoutDashboard, FileUser, Plus, LogOut, ArrowUpRight, StickyNote, Search } from "lucide-react";
 import { useSession } from "@/components/session";
 import { Brand, Feedback, Loading } from "@/components/ui";
 import { message } from "@/lib/schemas";
-const links = [{ href: "/board", label: "Board", icon: StickyNote }, { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard }, { href: "/profile", label: "Profile / CV", icon: FileUser }, { href: "/applications/new", label: "Add job offer", icon: Plus }];
+const links = [{ href: "/board", label: "Board", icon: StickyNote }, { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard }, { href: "/profile", label: "Profile / CV", icon: FileUser }, { href: "/explore", label: "Explore offers", icon: Search }, { href: "/applications/new", label: "Add job offer", icon: Plus }];
 export default function Workspace({ children }: { children: ReactNode }) {
   const { client, session, loading, error } = useSession();
   const router = useRouter(); const pathname = usePathname();

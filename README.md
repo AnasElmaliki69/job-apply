@@ -100,6 +100,85 @@ the SQL; tests do not read or modify your live Supabase database.
 
 ## Local setup
 
+### Explore offers setup
+
+1. For an **existing Supabase project**, run the complete file
+   **`supabase/migrations/202610140001_explore_offers.sql`** in Supabase → SQL Editor.
+   Do not rerun the original `schema.sql` on an existing installation. For a new
+   database, run `supabase/schema.sql` first, then this Explore migration. Board
+   migrations are independent. This adds owner-scoped preferences and offer states,
+   plus a nullable source link on applications. Existing CVs, applications and Board
+   data are preserved; the migration can be rerun safely.
+2. Register your own application at <https://developer.adzuna.com/signup>. Complete
+   the registration for your actual personal project and review/accept the provider
+   terms yourself. Get the application ID and key from your account. Confirm that
+   your access permits the France (`fr`) job-search endpoint. If your account is not
+   approved or receives 403, contact Adzuna for access; the app cannot grant it.
+3. Add these **server-only** variables to `.env.local`:
+
+   ```dotenv
+   ADZUNA_APP_ID=your-application-id
+   ADZUNA_APP_KEY=your-application-key
+   ```
+
+   Do not add a `NEXT_PUBLIC_` prefix. No service-role key is used. The existing
+   Supabase URL and anon key are still required. Do not commit `.env.local`.
+4. Run `npm install`, restart `npm run dev`, sign in, and open **Explore offers**.
+   Search by keywords and/or a French city/postcode; use **Save preferences** to
+   restore them on later visits. Saved preferences trigger one search on page open.
+   Otherwise, searches run only when you press Search or change results pages.
+
+**Why Adzuna:** France Travail was evaluated first. Its official data.gouv listing
+currently reports restricted access and directs new users to a contact request:
+<https://www.data.gouv.fr/dataservices/api-offres-demploi>. Adzuna provides a documented
+France search API with keyword, location and contract filters. Implementation uses
+the official [search guide](https://developer.adzuna.com/docs/search) and the
+[OpenAPI specification](https://developer.adzuna.com/swagger/spec/test2.json), linked
+from its interactive documentation. It returns **description excerpts**, not complete
+adverts. The app makes this clear on results and on the prepared application form.
+
+**Using it:** Save adds an offer to **Saved offers**, without an AI call. Select
+**Prepare application** to open the existing Add job offer form with title, company,
+source link and excerpt already filled in. You can edit these before explicitly
+clicking **Analyze Offer** for the French CV and lettre de motivation. Existing
+applications for the same saved offer are reused, with a unique database index
+preventing duplicate application rows. Saved offers do not appear on Dashboard
+until an analysis has produced an application; find the shortlist in Explore.
+
+Dismiss hides an offer on future searches by provider ID, independently of your
+current preferences. **Show dismissed** or the **Dismissed** tab lets you see and
+restore it. Saved and dismissed items are personal snapshots, not an assertion
+that a vacancy remains open. Follow **Original listing** through Adzuna to verify
+availability and read the full advert. There is no scraping or automated application.
+
+Results are requested newest-first within 30 days of publication, in pages of 20.
+Location uses the provider's 20 km radius. Remote filtering checks explicit wording
+in the returned page only; unknown arrangements are excluded for a specific remote
+preference. It does not verify eligibility for remote work. A filtered page may be
+empty while later pages still contain matches. Alternance and Stage append keywords;
+the remaining contract choices use the provider's documented contract/time flags.
+There is no AI ranking, background refresh, scheduler or automatic application.
+
+**Provider rules:** Review the current [API terms](https://developer.adzuna.com/docs/terms_of_service)
+and linked general terms for your account. Each displayed offer includes the required
+linked Adzuna attribution (at least 116 × 23 pixels) and retains its returned listing
+link. API fetches and responses use `no-store`; no shared results cache or bulk feed
+archive is created. Only explicitly saved/dismissed offers are retained per account.
+Default published quotas are 25 requests/minute, 250/day, 1,000/week and 2,500/month;
+your account's actual entitlement controls access. Provider 429 errors stop the
+request, with no automatic retry. Personal use and wider/public/commercial reuse have
+different terms; obtain any required licence before expanding usage. If access is
+terminated, remove the provider's stored listing data/excerpts and attribution from
+your database and displayed pages as required by the agreement, including excerpts
+copied into `applications.job_offer_text`. Do not scrape the source to obtain missing
+description text or bypass the provider's redirect links.
+
+**Verification:** `npm test` includes mocked provider/authentication tests and real
+local PostgreSQL migration/RLS tests using PGlite. They cover duplicate saves,
+cross-user links, dismissal restoration and reuse of an existing application without
+an AI call. Real France searches require an approved Adzuna ID/key and the SQL
+migration above. No live provider or AI credentials are used by these tests.
+
 ### Gemini setup (selected in this local checkout)
 
 Edit .env.local and replace the GEMINI_API_KEY placeholder with your Google AI

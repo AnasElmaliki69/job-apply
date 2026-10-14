@@ -28,13 +28,14 @@ export const offerSchema = z.object({
   company: z.string().trim().min(1, "Enter a company.").max(200),
   jobOfferText: z.string().trim().min(1, "Paste the job offer.").max(30000)
 }).strict();
+export const analysisRequestSchema = offerSchema.extend({ savedOfferId: z.uuid().optional() });
 export const cvSchema = z.string().trim().min(1, "Paste your CV before saving.").max(30000);
 export const progressSchema = z.object({ status: z.enum(statuses), notes: z.string().max(10000) });
 export type Analysis = z.infer<typeof analysisSchema>;
 export type Application = {
   id: string; user_id: string; job_title: string; company: string;
   job_offer_text: string; ai_analysis: Analysis; status: Status; notes: string;
-  created_at: string; updated_at: string;
+  created_at: string; updated_at: string; source_offer_id?: string | null;
 };
 export function message(error: unknown): string {
   if (error && typeof error === "object" && "message" in error && typeof error.message === "string") return error.message;
