@@ -1,9 +1,7 @@
 # Interaction polish
 
-This branch starts from `develop` and includes the existing Board/Projects commits
-as prerequisites because they were not yet in local `develop`. It does not merge
-into `develop` or deploy anything. There is no additional SQL migration for the
-interaction changes; existing Board/Projects database setup is still required.
+The interaction improvements are included in `main`. There is no additional SQL
+migration for these changes; existing Board/Projects database setup is still required.
 
 ## What changed
 

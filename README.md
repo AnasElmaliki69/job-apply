@@ -4,9 +4,8 @@ A personal workspace for job applications, everyday organization and self-testin
 Built with Next.js App Router, TypeScript, Tailwind CSS, Supabase and Gemini.
 The interface and newly generated study quizzes are in English. Generated CVs and cover letters are in French.
 
-This guide sets up the **`feature/board-projects` branch** on your own computer.
-It includes applications, Board, Explore offers and Study. These features may not
-all be available on `main` yet.
+This guide sets up the **`main` branch** on your own computer.
+It includes applications, Board and Projects, Explore offers, Study, and light/dark themes.
 
 ## What you need
 
@@ -43,12 +42,12 @@ the terminal after installation and check that the installer added it to PATH.
 Choose a folder where you keep projects, open a terminal there, then run:
 
 ```sh
-git clone --branch feature/board-projects https://github.com/AnasElmaliki69/job-apply.git
+git clone --branch main https://github.com/AnasElmaliki69/job-apply.git
 cd job-apply
 git branch --show-current
 ```
 
-The last command should print `feature/board-projects`. If the repository is private,
+The last command should print `main`. If the repository is private,
 you need access and must authenticate with GitHub when Git requests it.
 
 If you already have a clone, use it instead of cloning again. Check `git status`
@@ -56,12 +55,12 @@ and preserve any local changes before switching branches:
 
 ```sh
 git fetch origin
-git switch feature/board-projects
-git pull --ff-only origin feature/board-projects
+git switch main
+git pull --ff-only origin main
 ```
 
 If the branch only exists on the remote, use
-`git switch --track origin/feature/board-projects` instead of `git switch` above.
+`git switch --track origin/main` instead of `git switch` above.
 
 Run every following terminal command from the **repository root**, the folder
 containing `package.json`, `.env.example` and `supabase/`.
@@ -436,7 +435,7 @@ browser checks](docs/themes.md). No new environment variables or SQL are require
 ## Updating an existing installation
 
 1. Stop the running app and preserve local changes (`git status`).
-2. On `feature/board-projects`, run `git pull --ff-only origin feature/board-projects`.
+2. On `main`, run `git pull --ff-only origin main`.
 3. Run `npm ci` when dependencies or the lockfile change.
 4. Run any newly introduced SQL migrations; do not rerun the base schema.
 5. Add any new environment variables without overwriting your existing values.

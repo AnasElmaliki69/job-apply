@@ -1,4 +1,4 @@
--- JobApply database setup for feature/board-projects.
+-- JobApply database setup for main.
 -- NEW EMPTY SUPABASE DATABASES ONLY. Do not run this file on an existing installation.
 -- Paste the complete file into Supabase SQL Editor and click Run.
 -- Bundled in dependency order from the source files identified below.

@@ -48,5 +48,4 @@ Manual browser checklist, for both themes at desktop and mobile widths:
 - Use Tab/Shift+Tab, native arrow keys/typeahead and touch selection. Check long
   option labels, disabled controls, modal focus and forced-colors preferences.
 
-This branch includes existing Board/Projects and interaction commits as prerequisites
-because they were not yet in local `develop`. The theme work adds no SQL migration.
+The themes and dropdown improvements are included in `main` and add no SQL migration.
