@@ -300,7 +300,9 @@ Board is the landing page after sign-in and when opening the app. **Cards** is t
 initial view; the **Cards / Projects** switch keeps both in one workspace. Job
 applications remain at `/dashboard`, labeled **Applications** under **Job applications**.
 
-- Click **New card** to open a compact dialog. A title or short thought is the only
+- Click the floating **+ Create card** button at the bottom right to open a compact
+  dialog. It matches Create project: the label expands on hover or keyboard focus
+  and stays visible on touch screens. A title or short thought is the only
   required field. Note, Idea, Task, Reminder, Problem and Solution have subtle
   backgrounds and explicit labels. Optional details include a project, category,
   due date, notes and a content format (Text, Link, Code snippet or Decision).
