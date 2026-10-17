@@ -1,0 +1,3 @@
+export function BoardLoading() {
+  return <div aria-busy="true" aria-label="Loading your board" className="min-h-[55vh]"><p role="status" className="mb-5 text-sm text-slate-500">Loading your board…</p><div aria-hidden="true" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{Array.from({ length:6 },(_,index) => <div key={index} className="rounded-2xl border border-slate-200/70 bg-white/70 p-5"><div className="mb-6 h-5 w-20 rounded-full bg-slate-100"/><div className="mb-3 h-4 w-4/5 rounded bg-slate-100"/><div className="mb-8 h-4 w-3/5 rounded bg-slate-100"/><div className="h-10 rounded-lg bg-slate-50"/></div>)}</div></div>;
+}

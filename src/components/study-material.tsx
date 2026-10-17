@@ -1,4 +1,5 @@
 'use client';
+import { Disclosure } from './disclosure';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -49,7 +50,7 @@ export default function StudyMaterialPage({ id }: { id: string }) {
         <p className="mt-4 text-xs text-slate-500">AI can make mistakes. Results include an excerpt from your notes so you can check the explanation. Add enough detail for distinct questions.</p>
       </section>
       <section><h2 className="mb-3 text-lg font-semibold">Saved quizzes</h2>{!quizzes.length ? <div className="card text-sm text-slate-500">No quiz yet. Start with 5 questions above.</div> : <div className="grid gap-3 sm:grid-cols-2">{quizzes.map(quiz => <Link key={quiz.id} href={`/study/quizzes/${quiz.id}`} className="card hover:border-indigo-300"><h3 className="font-semibold">{quiz.question_count} questions</h3><p className="mt-2 text-sm text-slate-500">{new Date(quiz.created_at).toLocaleString()}</p><p className="mt-3 text-sm text-indigo-600">Take quiz / previous scores →</p></Link>)}</div>}</section>
-      <details className="card"><summary className="cursor-pointer font-semibold">Saved study material</summary><p className="mt-4 whitespace-pre-wrap break-words text-sm leading-7 text-slate-600">{material.content}</p></details>
+      <Disclosure className="card" label="Saved study material" triggerClassName="font-semibold"><p className="mt-4 whitespace-pre-wrap break-words text-sm leading-7 text-slate-600">{material.content}</p></Disclosure>
     </div>}
   </>;
 }

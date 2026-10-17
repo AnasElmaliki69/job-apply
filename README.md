@@ -343,6 +343,10 @@ archive/restore it. Also check the dialogs with Tab, Shift+Tab and Escape, small
 screens, and reduced motion. Tests cover migration/RLS, preservation of data,
 project/card validation, task progress, grouping and memory compatibility.
 
+For Board disclosure, focus, save feedback and reduced-motion behavior, see
+[interaction checks](docs/interaction-checks.md). The interaction polish itself
+requires no additional database migration.
+
 ### Find offers
 
 Open **Explore offers**, enter keywords and/or a French location, then search.
