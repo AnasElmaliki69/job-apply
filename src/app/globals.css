@@ -16,11 +16,11 @@ button, a, input, textarea, select { @apply focus-visible:outline-2 focus-visibl
 .project-progress::-webkit-progress-bar { background: #e2e8f0; border-radius: 999px; }
 .project-progress::-webkit-progress-value { background: #818cf8; border-radius: 999px; }
 .project-progress::-moz-progress-bar { background: #818cf8; border-radius: 999px; }
-.project-create-label { max-width: 10rem; }
-.project-create-fab { bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px)); }
+.floating-create-label { max-width: 10rem; }
+.floating-create { bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px)); }
 @media (hover: hover) and (pointer: fine) {
-  .project-create-label { max-width: 0; opacity: 0; transition: max-width 150ms ease, opacity 150ms ease; }
-  .project-create-fab:hover .project-create-label, .project-create-fab:focus-visible .project-create-label { max-width: 10rem; opacity: 1; }
+  .floating-create-label { max-width: 0; opacity: 0; transition: max-width 150ms ease, opacity 150ms ease; }
+  .floating-create:hover .floating-create-label, .floating-create:focus-visible .floating-create-label { max-width: 10rem; opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
