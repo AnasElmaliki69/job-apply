@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { cvSchema, offerSchema } from "@/lib/schemas";
+import { cvSchema, analysisRequestSchema } from "@/lib/schemas";
 import { AnalysisError, analyzeOffer } from "@/lib/openai";
 import { analyzeWithGemini } from "@/lib/gemini";
 import { reconcileCvSources } from "@/lib/cv";
@@ -25,13 +25,26 @@ export async function POST(request: Request) {
     const chunks: Uint8Array[] = []; let bytes = 0;
     while (true) { const { done, value } = await reader.read(); if (done) break; bytes += value.byteLength; if (bytes > 200000) { await reader.cancel(); return fail("The job offer is too large.", 413); } chunks.push(value); }
     let body: unknown; try { body = JSON.parse(Buffer.concat(chunks).toString("utf8")); } catch { return fail("Invalid JSON request.", 400); }
-    const parsed = offerSchema.safeParse(body); if (!parsed.success) return fail(parsed.error.issues[0].message, 400);
+    const parsed = analysisRequestSchema.safeParse(body); if (!parsed.success) return fail(parsed.error.issues[0].message, 400);
+    const { savedOfferId, ...offer } = parsed.data;
+    if (savedOfferId) {
+      const source = await supabase.from('explore_offers').select('id,state').eq('id',savedOfferId).eq('user_id',user.id).maybeSingle();
+      if (source.error) return fail('Could not load your saved offer. Check the Explore database migration.',500);
+      if (!source.data || source.data.state !== 'saved') return fail('Save this offer in Explore offers before analyzing it.',404);
+      const existing = await supabase.from('applications').select('id').eq('source_offer_id',savedOfferId).eq('user_id',user.id).maybeSingle();
+      if (existing.error) return fail('Could not check this saved application. Try again.',500);
+      if (existing.data) return NextResponse.json({ applicationId: existing.data.id }, { headers: { 'Cache-Control': 'no-store' } });
+    }
     const { data: profile, error: profileError } = await supabase.from("profiles").select("cv_text").eq("user_id", user.id).maybeSingle();
     if (profileError) return fail("Could not load your CV. Check the database setup and try again.", 500);
     const cv = cvSchema.safeParse(profile?.cv_text); if (!cv.success) return fail("Save your CV on the Profile / CV page first.", 400);
-    const offer = parsed.data; const generated = await (provider === "gemini" ? analyzeWithGemini : analyzeOffer)({ ...offer, cvText: cv.data }, apiKey);
+    const generated = await (provider === "gemini" ? analyzeWithGemini : analyzeOffer)({ ...offer, cvText: cv.data }, apiKey);
     const analysis = { ...reconcileCvSources(generated, cv.data), masterCvText: cv.data, confirmedSkills: [] };
-    const { data: application, error: saveError } = await supabase.from("applications").insert({ user_id: user.id, job_title: offer.jobTitle, company: offer.company, job_offer_text: offer.jobOfferText, ai_analysis: analysis, status: "saved", notes: "" }).select("id").single();
+    const { data: application, error: saveError } = await supabase.from("applications").insert({ user_id: user.id, job_title: offer.jobTitle, company: offer.company, job_offer_text: offer.jobOfferText, ai_analysis: analysis, status: "saved", notes: "", ...(savedOfferId ? { source_offer_id: savedOfferId } : {}) }).select("id").single();
+    if (saveError?.code === '23505' && savedOfferId) {
+      const existing = await supabase.from('applications').select('id').eq('source_offer_id',savedOfferId).eq('user_id',user.id).maybeSingle();
+      if (!existing.error && existing.data) return NextResponse.json({ applicationId: existing.data.id }, { headers: { 'Cache-Control': 'no-store' } });
+    }
     if (saveError || !application) return fail("Analysis completed, but saving failed. Check the database setup before retrying.", 500);
     return NextResponse.json({ applicationId: application.id, ...analysis }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {

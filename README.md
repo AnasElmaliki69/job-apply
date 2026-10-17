@@ -1,260 +1,458 @@
 # JobApply
 
-Minimal job application assistant using Next.js App Router, TypeScript, Tailwind CSS,
-Supabase email/password Auth and database, and configurable Gemini / OpenAI analysis.
+A personal workspace for job applications, everyday organization and self-testing.
+Built with Next.js App Router, TypeScript, Tailwind CSS, Supabase and Gemini.
+The interface and newly generated study quizzes are in English. Generated CVs and cover letters are in French.
 
-## Development
+This guide sets up the **`feature/board-projects` branch** on your own computer.
+It includes applications, Board, Explore offers and Study. These features may not
+all be available on `main` yet.
 
-Version two is developed on `develop`; `main` retains the stable first version.
-Use feature branches and pull requests for upgrades. See [CONTRIBUTING.md](CONTRIBUTING.md)
-for the branch workflow and required checks. GitHub Actions runs TypeScript checks,
-tests and a production build once the workflow is pushed to GitHub.
+## What you need
 
-## Personal Board setup (existing and new Supabase projects)
+| Requirement | Purpose |
+| --- | --- |
+| [Node.js 24](https://nodejs.org/en/download) with npm | Runs the app; matches the repository's CI configuration |
+| [Git](https://git-scm.com/downloads) | Downloads the repository and its updates |
+| A terminal and a text editor | PowerShell on Windows, Terminal on macOS/Linux; VS Code is optional |
+| A [Supabase account](https://supabase.com/dashboard) and your own project | Database and email/password authentication |
+| A [Google AI Studio account and Gemini API key](https://aistudio.google.com/apikey) | Generates adapted CVs, cover letters and study quizzes |
+| An [Adzuna developer account](https://developer.adzuna.com/signup), optional | Enables Explore offers |
+| An internet connection | Connects the local app to Supabase and the selected providers |
 
-For an existing installation, **do not rerun `supabase/schema.sql`**. In your
-Supabase dashboard, open **SQL Editor → New query**, paste the complete contents
-of **`supabase/migrations/20261013_personal_board.sql`**, and click **Run**.
-Then run **`supabase/migrations/202610130001_board_card_delete.sql`** to enable owner-only
-card deletion. If Board is already installed, only this second migration is needed.
-Apply these files in the listed order when setting up a new database or rerunning
-all migrations; the base Board migration resets its table grants.
-This migration is additive and rerunnable. It adds `board_projects`, `board_cards`
-and `board_solutions` with indexes, ownership policies and update timestamps.
-It does not modify or remove your existing profiles, CVs or job applications.
-On a brand-new database, run `supabase/schema.sql` first, then this migration.
+You do **not** need Docker, a local PostgreSQL installation, Python, a global Next.js
+installation or a Supabase service-role key for this setup. Supabase runs the database
+online; the web app runs on your computer.
 
-After updating the project, run:
+## 1. Install Node.js and Git
+
+Install Node.js 24 and Git using the links above, then open a **new terminal**.
+Check that all three commands work:
+
+```sh
+node --version
+npm --version
+git --version
+```
+
+`node --version` should start with `v24.`. If a command is not recognized, restart
+the terminal after installation and check that the installer added it to PATH.
+
+## 2. Download the project
+
+Choose a folder where you keep projects, open a terminal there, then run:
+
+```sh
+git clone --branch feature/board-projects https://github.com/AnasElmaliki69/job-apply.git
+cd job-apply
+git branch --show-current
+```
+
+The last command should print `feature/board-projects`. If the repository is private,
+you need access and must authenticate with GitHub when Git requests it.
+
+If you already have a clone, use it instead of cloning again. Check `git status`
+and preserve any local changes before switching branches:
+
+```sh
+git fetch origin
+git switch feature/board-projects
+git pull --ff-only origin feature/board-projects
+```
+
+If the branch only exists on the remote, use
+`git switch --track origin/feature/board-projects` instead of `git switch` above.
+
+Run every following terminal command from the **repository root**, the folder
+containing `package.json`, `.env.example` and `supabase/`.
+
+## 3. Install the dependencies
+
+```sh
+npm ci
+```
+
+This installs the exact dependencies in `package-lock.json`. Wait for the command
+to finish before continuing. You do not need to install Next.js separately.
+
+## 4. Create your Supabase project
+
+1. Sign in to [Supabase](https://supabase.com/dashboard).
+2. Create a new project in your organization. Choose its name, database password
+   and region, then wait for provisioning to finish.
+3. Open the project's **Connect** dialog to find its **Project URL** and public
+   **publishable key**. You can also find keys under **Settings → API Keys**.
+4. Keep these values for step 7. A legacy public `anon` key is also supported.
+
+Use the public publishable/anon key, **not** a secret key, database password or
+`service_role` key. The variable in this project is named
+`NEXT_PUBLIC_SUPABASE_ANON_KEY`, including when you supply a publishable key.
+See [Supabase's key documentation](https://supabase.com/docs/guides/getting-started/api-keys).
+
+## 5. Create the database tables
+
+### New, empty Supabase database
+
+Download or open **[setup-database.txt](supabase/setup-database.txt)**. On GitHub,
+open the file and use **Raw** or the download button to get its plain text.
+It contains the complete database setup for this branch in the correct order.
+
+1. Open **SQL Editor → New query** in your Supabase project.
+2. Copy the **entire contents** of `setup-database.txt` into that query.
+3. Click **Run** and wait for success.
+
+Use this text file **only on a new, empty database**, and do not also run the source
+files individually afterward. The SQL is in the downloadable file, not this README.
+
+For reference, it bundles these source files:
+
+If applying source files separately instead, use this exact order; do not rely on
+alphabetical filename order.
+
+| Order | File | What it installs |
+| --- | --- | --- |
+| 1 | [supabase/schema.sql](supabase/schema.sql) | Profiles, master CV text and job applications |
+| 2 | [20261013_personal_board.sql](supabase/migrations/20261013_personal_board.sql) | Board projects, cards, problems and solutions |
+| 3 | [202610130001_board_card_delete.sql](supabase/migrations/202610130001_board_card_delete.sql) | Owner-only permanent card deletion |
+| 4 | [202610140001_explore_offers.sql](supabase/migrations/202610140001_explore_offers.sql) | Search preferences and saved/dismissed offers |
+| 5 | [202610140002_study_quizzes.sql](supabase/migrations/202610140002_study_quizzes.sql) | Subjects, material, quizzes, attempts and scoring functions |
+| 6 | [202610170001_board_projects_workspace.sql](supabase/migrations/202610170001_board_projects_workspace.sql) | Project goals, links and context; card formats for links, code and decisions |
+
+These scripts create indexes, table permissions and row-level security (RLS).
+Do not disable RLS to fix a setup error. It keeps each account's data private.
+The app does **not** apply SQL automatically when you run `npm run dev`.
+
+### Existing Supabase database
+
+Do **not** rerun `supabase/schema.sql`: it is the initial schema, not an upgrade
+script. Do **not** run `setup-database.txt` on an existing installation either.
+Keep your existing project and data, and run only the migrations you have
+not applied, in the order above. Keep a backup before database maintenance.
+
+The feature migrations are rerunnable. If you rerun the base Board migration,
+rerun the card-delete migration immediately afterward because the base Board
+migration resets its table grants. If SQL reports a missing referenced table,
+check the preceding steps rather than deleting existing tables.
+
+## 6. Configure email/password authentication
+
+In your Supabase dashboard:
+
+1. Open **Authentication → Sign In / Providers** and enable the **Email** provider
+   with email/password sign-in. Dashboard wording may vary.
+2. Open **Authentication → URL Configuration**.
+3. Set **Site URL** to `http://localhost:3000`.
+4. Add `http://localhost:3000/login` to the allowed **Redirect URLs** and save.
+5. Leave email confirmation enabled if you want verified accounts. When creating
+   an account in step 9, open its confirmation email before signing in.
+
+For a private local test, you may choose to disable email confirmation in your
+Supabase email settings. For wider use, configure reliable email delivery and
+review Supabase's [SMTP setup](https://supabase.com/docs/guides/auth/auth-smtp).
+If you use another port later, update both local URLs to match it.
+
+Reference: [Supabase redirect URL configuration](https://supabase.com/docs/guides/auth/redirect-urls).
+
+## 7. Create your local environment file
+
+In the repository root, copy the example file **once**.
+
+**Windows PowerShell:**
 
 ```powershell
-npm install
+Copy-Item .env.example .env.local
+```
+
+**macOS / Linux:**
+
+```sh
+cp .env.example .env.local
+```
+
+If `.env.local` already exists, edit it in place instead of overwriting your keys.
+Open it in your editor and replace the placeholders. Keep the filename exactly
+`.env.local`, not `.env.local.txt`.
+
+Minimum configuration for applications, Board and Study:
+
+```dotenv
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-public-publishable-or-anon-key
+AI_PROVIDER=gemini
+GEMINI_API_KEY=your-gemini-api-key
+GEMINI_MODEL=gemini-3.5-flash-lite
+```
+
+### Get your Gemini key
+
+1. Open [Google AI Studio → API keys](https://aistudio.google.com/apikey).
+2. Select or create your Google project and create an API key.
+3. Paste the actual key into `GEMINI_API_KEY` in `.env.local`.
+4. Check that your project has access to the configured `GEMINI_MODEL`. The value
+   above is this app's default; set another supported model if unavailable to you.
+5. Check your active model limits and any billing requirements in AI Studio before
+   generating. Availability and free allowances depend on your project and model.
+
+The key stays server-side. Do not add `NEXT_PUBLIC_` to Gemini, OpenAI or Adzuna
+credentials. Never commit `.env.local`; it is already excluded by `.gitignore`.
+See [Google's API key guide](https://ai.google.dev/gemini-api/docs/api-key) and
+[rate-limit documentation](https://ai.google.dev/gemini-api/docs/rate-limits).
+
+### Environment variable reference
+
+| Variable | Required? | Where to get it / behavior |
+| --- | --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Your Supabase project's Connect dialog |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase public publishable or legacy anon key |
+| `AI_PROVIDER` | Set to `gemini` for this guide | Selects Gemini or OpenAI for job analysis; set it explicitly |
+| `GEMINI_API_KEY` | Yes for Gemini analysis and Study | Your Google AI Studio API key |
+| `GEMINI_MODEL` | Optional | Defaults to `gemini-3.5-flash-lite`; must be available to your project |
+| `ADZUNA_APP_ID` | Only for Explore offers | Adzuna developer dashboard application ID |
+| `ADZUNA_APP_KEY` | Only for Explore offers | Adzuna developer dashboard application key |
+| `OPENAI_API_KEY` | Only if job analysis uses `AI_PROVIDER=openai` | Your own OpenAI API key; leave unused for the Gemini setup |
+| `OPENAI_MODEL` | Optional for OpenAI job analysis | Defaults to `gpt-4.1-mini` in this codebase |
+| `MASTER_CV_OWNER_EMAIL` | Only for optional local text-file import | Your verified app account email; not needed for pasted CV text |
+
+Study always uses Gemini, including when job analysis is configured for OpenAI.
+There is no automatic fallback to another AI provider. This project does not
+require `SUPABASE_SERVICE_ROLE_KEY` for normal operations.
+
+## 8. Enable Explore offers (optional)
+
+Skip this step if you only need applications, Board and Study. Explore will show
+a configuration message until you add its credentials; other sections still work.
+
+1. [Register with Adzuna](https://developer.adzuna.com/signup), or
+   [sign in](https://developer.adzuna.com/login).
+2. Open your API dashboard/application details and find `app_id` and `app_key`.
+3. Confirm your account can use the France (`fr`) job-search API and review the
+   [provider's terms](https://developer.adzuna.com/docs/terms_of_service).
+4. Add both values to `.env.local`:
+
+```dotenv
+ADZUNA_APP_ID=your-application-id
+ADZUNA_APP_KEY=your-application-key
+```
+
+The API credentials stay on the server. If access is denied, check your account's
+approval with Adzuna; the app cannot grant access.
+
+Each search requests up to 20 offers. Search, page navigation and reopening Explore
+with saved search preferences make requests. Saving/dismissing an offer or switching
+result tabs does not. There is no background polling, shared cache or automatic retry.
+Check your account's quota; published default limits are listed in Adzuna's terms.
+
+## 9. Start the app and create your account
+
+```sh
 npm run dev
 ```
 
-Open `http://localhost:3000`, sign in normally, and choose **Board** in the
-navigation. No additional environment variables, service-role key, AI provider,
-notification service or scheduled job is needed for Board operations.
-Until the migration is applied, Board shows a setup error with a retry button;
-the existing job-application pages continue to use their existing tables.
+Keep the terminal open. Once Next.js reports **Ready**, visit
+[http://localhost:3000](http://localhost:3000).
 
-### Using the Board
+1. On the sign-in page, select **New here? Create an account**.
+2. Enter your email and a password of at least eight characters.
+3. Confirm your email if your Supabase project requires it, then sign in.
+4. You should reach Board, with Cards selected on your first visit. Study stays in
+   Workspace. Open the Job applications navigation section for Applications,
+   Profile / CV, Explore offers and Add job offer.
 
-Board remembers the current view, filters, expanded panels and scroll position
-when you return from a card. Unsaved quick-capture text and optional fields survive
-view changes and navigation. Drafts and workspace preferences use session storage,
-separately for each signed-in account, in the current browser tab; they are not
-saved to Supabase until you click Save card. Saving successfully or choosing
-Clear draft clears the draft. Closing the tab ends this storage. If browser storage
-is blocked, capture still works, but restoration across navigation may be unavailable.
-Quick type buttons let you choose Note, Idea, Task, Reminder, Problem or Solution
-without opening Optional details. Changing a view never reassigns an existing draft
-to a new project or type; the capture form shows where it will be saved.
+For later visits, open a terminal in the project folder and run `npm run dev` again.
+Stop it with **Ctrl+C**. Restart it after any change to `.env.local`.
 
-Application details has CV, Lettre de motivation and Progress shortcuts at the
-top. Copy letter copies the saved letter without making another AI call; if the
-browser denies clipboard access, the page explains how to copy the text manually.
+If port 3000 is occupied, stop the other process or choose a different port:
 
-- Enter a title or a short thought and press Enter or **Save card**. The default
-  is an open note in General. Expand Optional details for type, category, project,
-  date or longer notes. Capture within a project defaults to that project; capture
-  in Problems defaults to a problem, and Upcoming defaults to a reminder.
-- Use **All**, **General**, **Problems**, **Upcoming**, project buttons and
-  **Archive**. Search title/body/category and combine type, category, project,
-  status and due-date filters. Upcoming includes overdue and future dated open
-  tasks/reminders, ordered by date. Undated reminders remain in All or General.
-- Open a card to edit it, move it to a project or General, mark it done/resolved,
-  or reopen it. Type remains fixed after creation to preserve problem relationships.
-- Open a problem to add any number of solutions. For each solution, record
-  what you tried, its result and whether it worked, partly worked, did not work,
-  or has not been tried. Marking a solution as worked does not automatically
-  resolve the problem. Archived solutions remain visible in the problem history.
-- Manage projects to create, rename, archive or restore one. Archiving a project
-  hides its navigation button; its cards remain accessible in All. Use View in
-  project management to browse an archived project, or move its cards elsewhere.
-- Archive preserves
-  their current content, attempts, outcomes and timestamps. This MVP does not keep
-  a separate revision for every text edit. Cards also have a **Delete** action on
-  Board and card details, with a second **Delete permanently** confirmation.
-  Deleting a problem permanently removes all its attached solutions and outcomes.
-  Projects and individual solutions still use archive/restore. RLS restricts card
-  deletion to the signed-in owner, and stale card edits block deletion until reloaded.
+```sh
+npm run dev -- --port 3001
+```
 
-All Board database operations use the existing signed-in browser Supabase client
-and RLS. Composite foreign keys ensure cards cannot reference another user's
-project and solutions cannot reference another user's card or a non-problem card.
-Saving also checks `updated_at` to reject stale edits from another tab.
-Data is private to each account, with no new AI calls or background notifications.
+Use `http://localhost:3001` and update Supabase's Site URL and login redirect URL
+accordingly. `npm run dev` serves the app locally; it does not deploy it online.
 
-### Verification
+## 10. Try the main features
 
-```powershell
+### Save your master CV and prepare an application
+
+1. Open **Profile / CV**, paste your CV as text and click **Save CV**.
+2. Open **Add job offer** and enter a title, company and offer text.
+3. Click **Analyze Offer** to explicitly call your selected AI provider.
+4. The saved application opens with a tailored French CV, match analysis,
+   cover letter, interview questions, status and notes.
+5. Use **Download CV (PDF)** for the adapted CV. Use the **Lettre de motivation**
+   shortcut and **Copy letter** for the letter. Review both before using them.
+6. Return to Dashboard to find the application later.
+
+Your master CV is saved in Supabase as text in `profiles.cv_text`. Each generated
+application keeps a snapshot of the master text used for that analysis. Generating
+an adapted CV does not overwrite the master. PDF export reconstructs a formatted
+CV from the saved analysis; it does not edit an original Word/PDF file directly.
+The normal profile form accepts text, not PDF/DOCX uploads.
+
+A fresh clone contains **no personal CV**. You can ignore **Use my provided CV** and
+paste your own text. Optional local import requires your own UTF-8
+`private/master-cv.txt`, `MASTER_CV_OWNER_EMAIL`, a matching verified account and no
+existing saved profile. Neither that private folder nor `.env.local` is committed.
+
+### Use Board and Projects
+
+Board is the landing page after sign-in and when opening the app. **Cards** is the
+initial view; the **Cards / Projects** switch keeps both in one workspace. Job
+applications remain at `/dashboard`, labeled **Applications** under **Job applications**.
+
+- Click the floating **+ Create card** button at the bottom right to open a compact
+  dialog. It matches Create project: the label expands on hover or keyboard focus
+  and stays visible on touch screens. A title or short thought is the only
+  required field. Note, Idea, Task, Reminder, Problem and Solution have subtle
+  backgrounds and explicit labels. Optional details include a project, category,
+  due date, notes and a content format (Text, Link, Code snippet or Decision).
+- The dialog keeps a draft if you close it. Save clears it; Clear draft resets it.
+  All, General, Problems, Upcoming and Archive remain available. Search & filters
+  stays collapsed until needed. Each card's **Move & more** lets you move it between
+  General and a project, archive/restore it or confirm permanent deletion.
+- Select **Projects**, then use the floating **+ Create project** button. Its label
+  is visible on touch screens and expands on hover or keyboard focus with a mouse.
+  Only the name is required; goal, Git URL, source links and other details can wait.
+  The dialog supports keyboard focus containment, Escape and focus restoration.
+- Open a project to edit its goal/context, complete tasks, collect links/snippets,
+  record decisions (what you chose and why), and browse its related Board cards.
+  Each item is a regular card: moving a task into/out of a project updates progress.
+  Progress counts completed, non-archived task cards only; no tasks shows an empty
+  progress bar. Archiving keeps cards and history. Restore an archived project to
+  add new cards; its existing cards remain editable.
+- Project sections can be collapsed. Returning from a card restores the originating
+  project or Board view, filters, expanded sections and scroll position. Drafts and
+  view state are stored separately per account in the current browser tab's session
+  storage; closing the tab ends that storage. If storage is blocked the app remains
+  usable, but restoration across navigation is unavailable. Animations respect the
+  browser's reduced-motion preference.
+
+For an **existing installation**, run only
+**[202610170001_board_projects_workspace.sql](supabase/migrations/202610170001_board_projects_workspace.sql)**
+after the previous Board migrations. Do not run the full setup text file on an
+existing database. This additive, rerunnable migration gives old records empty
+project details and plain-text card format defaults. It preserves owner RLS,
+foreign keys, deletion permissions and existing applications, Study and Board data.
+No new environment variables, AI calls, notifications or service-role key are needed.
+
+To verify manually after applying it: sign in → Board → New card → save a title →
+open/edit it → return and check filters/scroll → Projects → create a project with
+only a name → add a task and complete it → check progress → add a link, code snippet
+and decision → move a task to General → check progress again → edit the project →
+archive/restore it. Also check the dialogs with Tab, Shift+Tab and Escape, small
+screens, and reduced motion. Tests cover migration/RLS, preservation of data,
+project/card validation, task progress, grouping and memory compatibility.
+
+For Board disclosure, focus, save feedback and reduced-motion behavior, see
+[interaction checks](docs/interaction-checks.md). The interaction polish itself
+requires no additional database migration.
+
+### Find offers
+
+Open **Explore offers**, enter keywords and/or a French location, then search.
+Save preferences for later visits. **Save** adds a shortlist entry;
+**Prepare application** fills the existing job-offer form. AI runs only when you
+click **Analyze Offer**. Dismissed listings stay hidden until shown or restored.
+
+Adzuna supplies **excerpts**, not full adverts. Follow **Original listing** to check
+availability and full details. Remote filtering checks explicit wording only;
+unknown arrangements can be excluded and a filtered page can be empty. Alternance
+and Stage use keywords. Saved offers reach Dashboard after application analysis.
+Every displayed offer retains its Adzuna attribution and original redirect link.
+Review provider terms before public/commercial reuse. If provider access is
+terminated, remove its saved listing data and excerpts from displayed pages and
+the database, including any copied into application offer text, as required.
+
+### Test your knowledge
+
+1. Open **Study**, create a subject and select it.
+2. Enter a topic and paste 50–20,000 characters of notes or a summary. Save material.
+3. Open that material, choose **5** or **10** questions and click **Generate quiz**.
+4. Choose an answer or **I'm not sure** for every question, then submit the whole quiz.
+5. Read your score, correct answers, explanations and supporting excerpts.
+6. Use **Review again** for wrong/unsure questions, or retry a saved quiz and compare
+   previous scores. Retrying uses no Gemini call.
+
+New quizzes, answer options, explanations and review-topic labels are generated in English, even from notes in another language. Supporting excerpts keep the source language. Previously saved quizzes keep their original text; generate a new quiz from the same material to use English.
+
+One explicit generation makes one Gemini request. A 30-second per-user cooldown
+limits repeated generation clicks; it is separate from Google's project-wide quota.
+Review uses the latest attempt per quiz; a successful full retry clears recovered
+mistakes. Practice checks in Review again do not change saved scores. Material is
+immutable in this version: save a new entry for revised notes. AI can make mistakes;
+check explanations against the shown excerpts and your sources.
+
+## 11. Check your installation
+
+Run these from the project root. Build first so Next.js generates route types on
+a fresh clone:
+
+```sh
 npm run build
 npm run typecheck
 npm test
 ```
 
-Board tests cover capture validation, date and combined filters, project/General
-views, completion/reopening, and migration/RLS behavior. The development-only
-PGlite dependency runs a local PostgreSQL engine with synthetic users to verify
-the SQL; tests do not read or modify your live Supabase database.
+Tests use synthetic data, mocked providers and a local in-memory PostgreSQL engine
+(PGlite). They do not require real AI keys, spend API credits or change your live
+Supabase database. Passing tests does not verify your personal credentials or
+email delivery: test signup, saving a CV and a Board card in your browser too.
 
-## Local setup
-
-### Gemini setup (selected in this local checkout)
-
-Edit .env.local and replace the GEMINI_API_KEY placeholder with your Google AI
-Studio key. Keep it server-only; never use a NEXT_PUBLIC prefix or commit the key.
-
-```dotenv
-AI_PROVIDER=gemini
-GEMINI_API_KEY=your-key
-GEMINI_MODEL=gemini-3.5-flash-lite
-```
-
-Restart npm run dev after editing. No OpenAI key or OpenAI credit is required when
-AI_PROVIDER=gemini. Supabase credentials and your saved master CV are still needed.
-The configured Gemini model must be available in your Google project. Gemini also
-has quotas; free-tier availability and billing/data terms depend on the model and
-region. Check https://ai.google.dev/gemini-api/docs/pricing and
-https://ai.google.dev/gemini-api/terms for your use case.
-To return to OpenAI, set AI_PROVIDER=openai and configure OPENAI_API_KEY.
-Generation uses the same French instructions, validation, and PDF export for both
-providers. There is no automatic fallback that transmits your CV to another provider.
-
-1. Install Node.js 20.9+ (a supported LTS version is recommended), which includes npm.
-2. Open a terminal in this project folder and run `npm install`.
-3. This checkout already has `.env.local` with your private master CV owner setting.
-   Edit it in place to add your Supabase and AI provider keys; preserve MASTER_CV_OWNER_EMAIL.
-   On a fresh checkout without that file, copy `.env.example`:
-   ```powershell
-   Copy-Item .env.example .env.local
-   ```
-4. Add your credentials:
-   ```dotenv
-   NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-public-anon-key
-   AI_PROVIDER=gemini
-   GEMINI_API_KEY=your-gemini-api-key
-   ```
-   Optional: `OPENAI_MODEL` defaults to `gpt-4.1-mini`. Use a model that supports
-   Responses API structured outputs. OpenAI requires API billing/quota; Gemini limits depend on your project.
-5. Create a Supabase project. Run `supabase/schema.sql` once in its SQL Editor
-   on a fresh database. This creates tables, indexes, timestamps, and RLS policies.
-6. Enable email/password under Supabase Authentication providers. Set the Auth
-   Site URL to `http://localhost:3000` and allow `http://localhost:3000/login`
-   as a redirect URL. Configure SMTP if needed for signup confirmation delivery.
-7. Run `npm run dev` and open http://localhost:3000.
-
-No `SUPABASE_SERVICE_ROLE_KEY` is needed. Both browser and server database calls
-use the public anon key plus the user's JWT, so row-level security is enforced.
-Never put an OpenAI or service-role key in a NEXT_PUBLIC variable.
-Restart the dev server after changing environment variables.
-
-## Usage
-
-### French CV tailoring
-
-New analyses generate a complete French CV, French change explanations, a French
-lettre de motivation, analysis and interview questions. The interface remains English.
-Each application stores the exact master CV snapshot used for its analysis inside
-ai_analysis, alongside rewritten sections and suggested skills. The master profile
-is not modified by generation. The detail page compares original text with rewritten
-French paragraphs, highlighting changes. Click Download CV (PDF) to get a clean A4
-PDF with the master CV's navy typography, centered identity header and blue rules.
-The export follows the supplied Word CV's hierarchy: bold entry titles and category
-labels, right-aligned dates when space allows, italic experience descriptions,
-indented blue bullets, and two-column certifications/languages. New analyses keep
-titles, dates and achievements on separate lines. Existing analyses receive the
-same formatting when their saved text has recognizable line breaks and dates.
-The content is rewritten and reflowed; this is a reconstructed PDF template, not
-a direct edit or exact reproduction of the Word file. The original is never overwritten.
-Longer CVs paginate rather than losing text. The PDF excludes comparison notes,
-unconfirmed skills, and learning suggestions. Export uses the application's saved
-analysis and requires authentication and ownership; it makes no extra AI call.
-Original excerpts are matched against the saved master text while tolerating PDF
-line wrapping and typographic variants. Unmatched excerpts are not displayed as
-authentic quotes; use the full master snapshot for comparison in that case.
-
-Suggested skills are excluded from the CV until you confirm you have them and save.
-Other suggestions remain under “Compétences à développer”. These are not exported.
-Existing applications remain readable; analyze a new offer to get the new features.
-No SQL migration is needed: the new fields live in the existing AI analysis JSON.
-
-Your provided PDF has been extracted locally into git-ignored private/master-cv.txt.
-Sign up with the email address on your CV, confirm your email, then use “Use my
-provided CV” on the Profile page. This saves it as your master CV in Supabase.
-The import checks the server-only MASTER_CV_OWNER_EMAIL in .env.local against your
-verified account email. It never overwrites an existing profile and is unavailable
-to other users. Neither the source CV nor this owner setting is included in Git.
-The text extraction preserves your CV content, but not the original PDF layout.
-
-Create an account, confirm your email if enabled, and sign in. Paste your CV on
-Profile / CV and save it. Add a job title, company, and offer text; click Analyze
-Offer. The application is saved with status `saved` and opens its detail page.
-Change status or notes and click Save changes. All saved applications appear on
-the dashboard with title, company, status, match score, and creation date.
-
-## Structure
-
-- `src/app/login`: signup and login
-- `src/app/(workspace)`: dashboard, profile, add offer, application detail
-- `src/app/api/analyze/route.ts`: verified user, saved CV, AI call, database save
-- `src/components`: session, layout helpers, application detail
-- `src/lib`: validation, Supabase browser client, OpenAI structured outputs
-- `supabase/schema.sql`: schema and owner-only policies
-- `tests/analysis.test.ts`: input and AI response validation
-
-## Verification
+To run the production build locally:
 
 ```sh
-npm run test
-npm run typecheck
 npm run build
+npm start
 ```
 
-Manual integration checks after configuring real credentials:
+## Appearance
 
-- Sign up, confirm email, sign in, save CV, analyze an offer.
-- Reload detail and dashboard; status and notes should persist.
-- Analyze without a saved CV; expect an actionable validation error.
-- Call /api/analyze without an Authorization header; expect HTTP 401.
-- Create two users. Verify neither can read/update the other's records through
-  the app or direct Supabase calls, including requests with another user's ID.
-- Anonymous database calls cannot read either table.
-- Test invalid/expired credentials and OpenAI/database failure states.
-- Check mobile and desktop layouts.
+Choose **Light**, **Dark** or **System** using the Theme control on the sign-in
+page or in workspace navigation. System follows your device by default; your
+selection is remembered across visits. Dark mode uses charcoal surfaces with
+restrained green accents and readable, distinct status colors. Native dropdowns
+share the same spacing and focus styles across the app. See [theme details and
+browser checks](docs/themes.md). No new environment variables or SQL are required.
 
-Verification in the creation session: all 7 tests, TypeScript checks, and the
-production webpack build passed. The dev server reached Ready, but the Windows
-sandbox blocked loopback connections for the HTTP/browser smoke check. Live
-Supabase/OpenAI integration and visual checks require your credentials and a
-normal local browser session.
+## Troubleshooting
 
-Auth sessions are managed in the browser; the Supabase SDK persists and refreshes
-tokens. Client route guards support navigation. RLS provides data isolation and
-the API independently verifies the JWT with Supabase getUser(). Profiles are
-created when the CV is saved, so no signup database trigger is required.
+| Problem | What to check |
+| --- | --- |
+| `npm` or `node` is not recognized | Install Node.js 24, reopen the terminal and check PATH |
+| PowerShell blocks `npm.ps1` | Use `npm.cmd ci` / `npm.cmd run dev`, or use Command Prompt |
+| Repository not found during clone | Confirm the URL, GitHub login and permission to access this private repository |
+| `package.json` cannot be found | Change into the cloned `job-apply` folder before running npm commands |
+| Missing Supabase configuration / invalid API key | Replace placeholders in `.env.local`, confirm the URL/key belong to the same project, then restart |
+| Missing relation/table/function or a Board/Explore/Study setup error | Run the SQL files for this branch in the order in step 5 |
+| Email confirmation never arrives | Check spam, Email provider settings, SMTP delivery and Supabase Auth logs |
+| Confirmation returns to the wrong URL | Match Site URL and the allowed `/login` redirect to your current local port |
+| Save CV does not create a PDF | Save CV stores the master text; analyze an offer, then download from application details |
+| Gemini reports 429 | Check the selected model's active quota in AI Studio; wait before trying again; saved quiz retries do not use Gemini |
+| Gemini rejects the key or model | Check your key, project restrictions and model access; restart after changing configuration |
+| Explore reports missing credentials, 403 or 429 | Add both Adzuna credentials, verify France API approval and check account quota |
+| Quiz generation fails | Material remains saved; use clearer/more detailed notes or fewer questions and retry later |
+| Port is already in use | Stop the other server or use the alternate-port command in step 9 |
 
-Analysis returns matchScore, summary, missingSkills, keywordsToAdd,
-improvedCvBullets, coverLetter, interviewQuestions, and applicationId.
-The CV is fetched server-side from the verified user's profile. Inputs and AI
-outputs are validated, request size is bounded, and AI calls have a timeout.
+## Updating an existing installation
 
-The CV and offer are sent to your selected AI provider only when analyzing. OpenAI uses
-store=false. The app does not log their content or render generated HTML.
-Scores are estimates; review generated text before sending an application.
+1. Stop the running app and preserve local changes (`git status`).
+2. On `feature/board-projects`, run `git pull --ff-only origin feature/board-projects`.
+3. Run `npm ci` when dependencies or the lockfile change.
+4. Run any newly introduced SQL migrations; do not rerun the base schema.
+5. Add any new environment variables without overwriting your existing values.
+6. Restart with `npm run dev` and check the affected pages.
 
-This MVP excludes PDF uploads and application submission automation. Add durable
-per-user rate limits before exposing a public paid AI endpoint. A database failure
-after successful AI generation may require another paid call when retried.
+## Project layout and contributions
 
-Dependencies have been installed and package-lock.json is included. Use `npm ci`
-for reproducible installs. The dev/build scripts explicitly use Next.js's supported
-webpack bundler for compatibility with this Windows environment.
+- `src/app/(workspace)/` — authenticated pages, including Board, Explore and Study.
+- `src/app/api/` — server routes for AI analysis, quiz generation and PDF export.
+- `src/components/` — forms, views and browser session handling.
+- `src/lib/` — validation, Supabase access and provider integrations.
+- `supabase/schema.sql` — initial database setup.
+- `supabase/setup-database.txt` — downloadable full setup for an empty database;
+  keep it synchronized with the source files when adding migrations.
+- `supabase/migrations/` — additive database upgrades.
+- `tests/` — unit, API and PostgreSQL security tests.
 
-## Official references
-
-- https://nextjs.org/docs/app/getting-started/installation
-- https://supabase.com/docs/guides/database/postgres/row-level-security
-- https://supabase.com/docs/reference/javascript/auth-getuser
-- https://developers.openai.com/api/docs/guides/structured-outputs
+See [CONTRIBUTING.md](CONTRIBUTING.md) for branches, pull requests and required
+checks. Keep API keys, real CVs and generated personal documents out of Git.
