@@ -4,7 +4,7 @@ A personal workspace for job applications, everyday organization and self-testin
 Built with Next.js App Router, TypeScript, Tailwind CSS, Supabase and Gemini.
 The interface and newly generated study quizzes are in English. Generated CVs and cover letters are in French.
 
-This guide sets up the **`feature/study-quizzes` branch** on your own computer.
+This guide sets up the **`feature/board-projects` branch** on your own computer.
 It includes applications, Board, Explore offers and Study. These features may not
 all be available on `main` yet.
 
@@ -43,12 +43,12 @@ the terminal after installation and check that the installer added it to PATH.
 Choose a folder where you keep projects, open a terminal there, then run:
 
 ```sh
-git clone --branch feature/study-quizzes https://github.com/AnasElmaliki69/job-apply.git
+git clone --branch feature/board-projects https://github.com/AnasElmaliki69/job-apply.git
 cd job-apply
 git branch --show-current
 ```
 
-The last command should print `feature/study-quizzes`. If the repository is private,
+The last command should print `feature/board-projects`. If the repository is private,
 you need access and must authenticate with GitHub when Git requests it.
 
 If you already have a clone, use it instead of cloning again. Check `git status`
@@ -56,12 +56,12 @@ and preserve any local changes before switching branches:
 
 ```sh
 git fetch origin
-git switch feature/study-quizzes
-git pull --ff-only origin feature/study-quizzes
+git switch feature/board-projects
+git pull --ff-only origin feature/board-projects
 ```
 
 If the branch only exists on the remote, use
-`git switch --track origin/feature/study-quizzes` instead of `git switch` above.
+`git switch --track origin/feature/board-projects` instead of `git switch` above.
 
 Run every following terminal command from the **repository root**, the folder
 containing `package.json`, `.env.example` and `supabase/`.
@@ -116,6 +116,7 @@ alphabetical filename order.
 | 3 | [202610130001_board_card_delete.sql](supabase/migrations/202610130001_board_card_delete.sql) | Owner-only permanent card deletion |
 | 4 | [202610140001_explore_offers.sql](supabase/migrations/202610140001_explore_offers.sql) | Search preferences and saved/dismissed offers |
 | 5 | [202610140002_study_quizzes.sql](supabase/migrations/202610140002_study_quizzes.sql) | Subjects, material, quizzes, attempts and scoring functions |
+| 6 | [202610170001_board_projects_workspace.sql](supabase/migrations/202610170001_board_projects_workspace.sql) | Project goals, links and context; card formats for links, code and decisions |
 
 These scripts create indexes, table permissions and row-level security (RLS).
 Do not disable RLS to fix a setup error. It keeps each account's data private.
@@ -253,8 +254,9 @@ Keep the terminal open. Once Next.js reports **Ready**, visit
 1. On the sign-in page, select **New here? Create an account**.
 2. Enter your email and a password of at least eight characters.
 3. Confirm your email if your Supabase project requires it, then sign in.
-4. You should reach Dashboard and see Board, Study, Profile / CV, Explore offers
-   and Add job offer in the navigation.
+4. You should reach Board, with Cards selected on your first visit. Study stays in
+   Workspace. Open the Job applications navigation section for Applications,
+   Profile / CV, Explore offers and Add job offer.
 
 For later visits, open a terminal in the project folder and run `npm run dev` again.
 Stop it with **Ctrl+C**. Restart it after any change to `.env.local`.
@@ -292,16 +294,52 @@ paste your own text. Optional local import requires your own UTF-8
 `private/master-cv.txt`, `MASTER_CV_OWNER_EMAIL`, a matching verified account and no
 existing saved profile. Neither that private folder nor `.env.local` is committed.
 
-### Use Board
+### Use Board and Projects
 
-Enter a short thought and press Enter or **Save card**. Optionally select Note,
-Idea, Task, Reminder, Problem or Solution, plus a project, category or due date.
-Use General, All, Problems, Upcoming and project views; open **Search & filters**
-when needed. Problems support attached solutions and outcomes. Archive preserves
-cards; **Delete permanently** removes a card and, for a problem, its solutions.
-Board uses Supabase, with no AI calls or email/push notifications.
-Unsaved drafts and navigation preferences are remembered per account in the current
-browser tab's session storage; closing the tab ends that storage.
+Board is the landing page after sign-in and when opening the app. **Cards** is the
+initial view; the **Cards / Projects** switch keeps both in one workspace. Job
+applications remain at `/dashboard`, labeled **Applications** under **Job applications**.
+
+- Click **New card** to open a compact dialog. A title or short thought is the only
+  required field. Note, Idea, Task, Reminder, Problem and Solution have subtle
+  backgrounds and explicit labels. Optional details include a project, category,
+  due date, notes and a content format (Text, Link, Code snippet or Decision).
+- The dialog keeps a draft if you close it. Save clears it; Clear draft resets it.
+  All, General, Problems, Upcoming and Archive remain available. Search & filters
+  stays collapsed until needed. Each card's **Move & more** lets you move it between
+  General and a project, archive/restore it or confirm permanent deletion.
+- Select **Projects**, then use the floating **+ Create project** button. Its label
+  is visible on touch screens and expands on hover or keyboard focus with a mouse.
+  Only the name is required; goal, Git URL, source links and other details can wait.
+  The dialog supports keyboard focus containment, Escape and focus restoration.
+- Open a project to edit its goal/context, complete tasks, collect links/snippets,
+  record decisions (what you chose and why), and browse its related Board cards.
+  Each item is a regular card: moving a task into/out of a project updates progress.
+  Progress counts completed, non-archived task cards only; no tasks shows an empty
+  progress bar. Archiving keeps cards and history. Restore an archived project to
+  add new cards; its existing cards remain editable.
+- Project sections can be collapsed. Returning from a card restores the originating
+  project or Board view, filters, expanded sections and scroll position. Drafts and
+  view state are stored separately per account in the current browser tab's session
+  storage; closing the tab ends that storage. If storage is blocked the app remains
+  usable, but restoration across navigation is unavailable. Animations respect the
+  browser's reduced-motion preference.
+
+For an **existing installation**, run only
+**[202610170001_board_projects_workspace.sql](supabase/migrations/202610170001_board_projects_workspace.sql)**
+after the previous Board migrations. Do not run the full setup text file on an
+existing database. This additive, rerunnable migration gives old records empty
+project details and plain-text card format defaults. It preserves owner RLS,
+foreign keys, deletion permissions and existing applications, Study and Board data.
+No new environment variables, AI calls, notifications or service-role key are needed.
+
+To verify manually after applying it: sign in → Board → New card → save a title →
+open/edit it → return and check filters/scroll → Projects → create a project with
+only a name → add a task and complete it → check progress → add a link, code snippet
+and decision → move a task to General → check progress again → edit the project →
+archive/restore it. Also check the dialogs with Tab, Shift+Tab and Escape, small
+screens, and reduced motion. Tests cover migration/RLS, preservation of data,
+project/card validation, task progress, grouping and memory compatibility.
 
 ### Find offers
 
@@ -383,7 +421,7 @@ npm start
 ## Updating an existing installation
 
 1. Stop the running app and preserve local changes (`git status`).
-2. On `feature/study-quizzes`, run `git pull --ff-only origin feature/study-quizzes`.
+2. On `feature/board-projects`, run `git pull --ff-only origin feature/board-projects`.
 3. Run `npm ci` when dependencies or the lockfile change.
 4. Run any newly introduced SQL migrations; do not rerun the base schema.
 5. Add any new environment variables without overwriting your existing values.

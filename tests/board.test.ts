@@ -7,7 +7,7 @@ function card(id: string, fields: Partial<BoardCard> = {}): BoardCard {
   return { id, user_id: 'user', title: 'A thought', body: '', type: 'note', category: '', project_id: null, due_date: null, status: 'open', archived_at: null, created_at: '2026-10-13', updated_at: '2026-10-13', ...fields };
 }
 test('quick capture requires only a title and trims whitespace', () => {
-  assert.deepEqual(cardInput.parse({ title: '  Gym tomorrow  ' }), { title: 'Gym tomorrow', body: '', type: 'note', category: '', project_id: null, due_date: null });
+  assert.deepEqual(cardInput.parse({ title: '  Gym tomorrow  ' }), { title: 'Gym tomorrow', body: '', type: 'note', category: '', project_id: null, due_date: null, format: 'text', url: '' });
   for (const input of [{ title: ' ' }, { title: 'a'.repeat(301) }, { title: 'X', due_date: '2026-02-30' }, { title: 'X', project_id: 'other' }, { title: 'X', user_id: 'spoof' }]) assert.equal(cardInput.safeParse(input).success, false);
   assert.equal(cardInput.safeParse({ title: 'X', due_date: '2028-02-29' }).success, true);
   assert.equal(projectInput.safeParse('  ').success, false);

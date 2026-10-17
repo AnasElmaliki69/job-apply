@@ -12,7 +12,7 @@ export default function Login() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  useEffect(() => { if (session) router.replace("/dashboard"); }, [session, router]);
+  useEffect(() => { if (session) router.replace("/board"); }, [session, router]);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); if (!client || busy) return;
     setBusy(true); setError(""); setNotice("");
