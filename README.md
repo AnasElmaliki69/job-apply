@@ -405,6 +405,15 @@ npm run build
 npm start
 ```
 
+## Appearance
+
+Choose **Light**, **Dark** or **System** using the Theme control on the sign-in
+page or in workspace navigation. System follows your device by default; your
+selection is remembered across visits. Dark mode uses charcoal surfaces with
+restrained green accents and readable, distinct status colors. Native dropdowns
+share the same spacing and focus styles across the app. See [theme details and
+browser checks](docs/themes.md). No new environment variables or SQL are required.
+
 ## Troubleshooting
 
 | Problem | What to check |

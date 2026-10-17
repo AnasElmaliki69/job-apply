@@ -5,6 +5,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { LayoutDashboard, FileUser, Plus, LogOut, StickyNote, Search, BookOpen } from 'lucide-react';
 import { useSession } from '@/components/session';
 import { Brand, Feedback, Loading } from '@/components/ui';
+import { ThemeControl } from '@/components/theme-control';
 import { message } from '@/lib/schemas';
 const workspaceLinks = [{ href:'/board',label:'Board',icon:StickyNote },{ href:'/study',label:'Study',icon:BookOpen }];
 const applicationLinks = [{ href:'/dashboard',label:'Applications',icon:LayoutDashboard },{ href:'/explore',label:'Explore offers',icon:Search },{ href:'/applications/new',label:'Add job offer',icon:Plus },{ href:'/profile',label:'Profile / CV',icon:FileUser }];
@@ -21,9 +22,9 @@ export default function Workspace({ children }: { children: ReactNode }) {
     <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col overflow-y-auto border-r border-slate-200 bg-white p-6 md:flex"><Link href="/board" aria-label="JobApply home"><Brand/></Link>
       <nav aria-label="Workspace navigation" className="mt-10 space-y-1"><p className="mb-3 px-3 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Workspace</p>{workspaceLinks.map(navLink)}</nav>
       <nav aria-label="Job applications navigation" className="mt-8 space-y-1"><p className="mb-3 px-3 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Job applications</p>{applicationLinks.map(navLink)}</nav>
-      <div className="mt-auto pt-10"><p className="mb-4 truncate text-xs text-slate-400" title={session.user.email}>{session.user.email}</p><button className="flex min-h-11 items-center gap-2 text-sm text-slate-500" disabled={busy} onClick={signOut}><LogOut size={16}/>{busy ? 'Signing out…' : 'Sign out'}</button></div>
+      <div className="mt-auto pt-10"><div className="mb-6"><ThemeControl/></div><p className="mb-4 truncate text-xs text-slate-400" title={session.user.email}>{session.user.email}</p><button className="flex min-h-11 items-center gap-2 text-sm text-slate-500" disabled={busy} onClick={signOut}><LogOut size={16}/>{busy ? 'Signing out…' : 'Sign out'}</button></div>
     </aside>
-    <header className="border-b border-slate-200 bg-white px-5 py-4 md:hidden"><div className="flex items-center justify-between gap-3"><Link href="/board" aria-label="JobApply home"><Brand/></Link><button className="secondary" disabled={busy} onClick={signOut}>Sign out</button></div><nav aria-label="Mobile workspace navigation" className="mt-4 flex gap-2">{workspaceLinks.map(navLink)}</nav><details className="mt-3 border-t border-slate-100 pt-3" open={applicationLinks.some(link => active(link.href))}><summary className="cursor-pointer py-2 text-sm font-medium text-slate-500">Job applications</summary><nav aria-label="Mobile job applications navigation" className="mt-2 grid grid-cols-2 gap-1">{applicationLinks.map(navLink)}</nav></details></header>
+    <header className="border-b border-slate-200 bg-white px-5 py-4 md:hidden"><div className="flex items-center justify-between gap-3"><Link href="/board" aria-label="JobApply home"><Brand/></Link><button className="secondary" disabled={busy} onClick={signOut}>Sign out</button></div><div className="mt-4"><ThemeControl/></div><nav aria-label="Mobile workspace navigation" className="mt-4 flex gap-2">{workspaceLinks.map(navLink)}</nav><details className="mt-3 border-t border-slate-100 pt-3" open={applicationLinks.some(link => active(link.href))}><summary className="cursor-pointer py-2 text-sm font-medium text-slate-500">Job applications</summary><nav aria-label="Mobile job applications navigation" className="mt-2 grid grid-cols-2 gap-1">{applicationLinks.map(navLink)}</nav></details></header>
     <main className="mx-auto max-w-6xl px-5 py-8 sm:px-10 md:py-12"><Feedback error={signoutError}/>{children}</main>
   </div>;
 }
