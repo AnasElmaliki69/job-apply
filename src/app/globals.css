@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @theme { --font-sans: "Segoe UI", Arial, Helvetica, sans-serif; }
+html { scrollbar-gutter: stable; }
 body { background: #f7f8fc; color: #172033; }
 @layer components {
   .card { @apply rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs; }
@@ -10,6 +11,16 @@ body { background: #f7f8fc; color: #172033; }
 }
 button, a, input, textarea, select { @apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600; }
 .board-switch { transition: background-color 140ms ease, color 140ms ease, box-shadow 140ms ease; }
+.disclosure-panel { display: grid; grid-template-rows: 0fr; opacity: 0; visibility: hidden; transition: grid-template-rows 180ms cubic-bezier(.2,.8,.2,1), opacity 130ms ease, visibility 180ms; }
+.disclosure[data-open="true"] > .disclosure-panel { grid-template-rows: 1fr; opacity: 1; visibility: visible; }
+.disclosure-content { min-width: 0; min-height: 0; overflow: hidden; }
+.disclosure-chevron { transition: transform 160ms ease; }
+.disclosure[data-open="true"] > .disclosure-trigger .disclosure-chevron { transform: rotate(180deg); }
+.board-surface:not([hidden]), .workspace-feedback { animation: content-enter 120ms ease-out; }
+@keyframes content-enter { from { opacity: .6; } to { opacity: 1; } }
+.button, .secondary { touch-action: manipulation; transition-property: color, background-color, border-color, box-shadow; transition-duration: 140ms; }
+.button:active:not(:disabled), .secondary:active:not(:disabled) { filter: brightness(.97); }
+.button:disabled, .secondary:disabled { cursor: wait; }
 .board-modal[open] { animation: board-enter 140ms ease-out; }
 @keyframes board-enter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 .project-progress { appearance: none; background: #e2e8f0; }
@@ -23,5 +34,5 @@ button, a, input, textarea, select { @apply focus-visible:outline-2 focus-visibl
   .floating-create:hover .floating-create-label, .floating-create:focus-visible .floating-create-label { max-width: 10rem; opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }

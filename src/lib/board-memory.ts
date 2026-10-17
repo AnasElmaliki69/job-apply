@@ -18,11 +18,12 @@ const memorySchema = z.object({
   capturePanelOpen: z.boolean().default(false),
   projectSearch: z.string().max(1000).default(''), showArchivedProjects: z.boolean().default(false),
   projectPanels: z.record(z.string(),z.boolean()).default({}),
+  cardPanels: z.record(z.string(),z.boolean()).default({}),
 });
 export type BoardMemory = Omit<z.infer<typeof memorySchema>, 'filters' | 'draft'> & { filters: BoardFilters; draft: CaptureDraft | null };
 type MemoryStorage = Pick<Storage, 'getItem' | 'setItem'>;
 export function emptyBoardMemory(): BoardMemory {
-  return { filters: { ...blankBoardFilters }, filtersOpen: false, projectsOpen: false, captureOpen: false, draft: null, scrollY: 0, surface: 'cards', capturePanelOpen: false, projectSearch: '', showArchivedProjects: false, projectPanels: {} };
+  return { filters: { ...blankBoardFilters }, filtersOpen: false, projectsOpen: false, captureOpen: false, draft: null, scrollY: 0, surface: 'cards', capturePanelOpen: false, projectSearch: '', showArchivedProjects: false, projectPanels: {}, cardPanels: {} };
 }
 export function readBoardMemory(storage: MemoryStorage, userId: string): BoardMemory {
   try {
