@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useSession } from './session';
 import { message } from '@/lib/schemas';
-import type { BoardCard, BoardProject, BoardSolution } from '@/lib/board';
+import { projectDetailsInput, type BoardCard, type BoardProject, type BoardSolution } from '@/lib/board';
 
 export function useBoard() {
   const { client, session } = useSession();
@@ -17,12 +17,19 @@ export function useBoard() {
     let active = true; setLoading(true); setError(''); setCards([]); setProjects([]);
     void (async () => {
       try {
-        const results = await Promise.all([
-          client.from('board_cards').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
-          client.from('board_projects').select('*').eq('user_id', userId).order('name'),
-        ]);
-        for (const result of results) if (result.error) throw result.error;
-        if (active) { setCards((results[0].data ?? []) as BoardCard[]); setProjects((results[1].data ?? []) as BoardProject[]); }
+        async function loadAll(table: 'board_cards' | 'board_projects') {
+          const rows: { id: string }[] = []; let last = '';
+          for (;;) {
+            let query = client!.from(table).select('*').eq('user_id',userId!).order('id').limit(500);
+            if (last) query = query.gt('id',last);
+            const result = await query; if (result.error) throw result.error;
+            rows.push(...result.data); if (result.data.length < 500) break;
+            last = result.data[result.data.length-1].id;
+          }
+          return rows;
+        }
+        const [cards,projects] = await Promise.all([loadAll('board_cards'),loadAll('board_projects')]);
+        if (active) { setCards(cards as BoardCard[]); setProjects((projects as BoardProject[]).sort((a,b) => a.name.localeCompare(b.name))); }
       } catch (err) { if (active) setError(`Could not load your board. ${message(err)} If this is your first visit, run the Board SQL migration in README.md.`); }
       finally { if (active) setLoading(false); }
     })();
@@ -43,13 +50,15 @@ export function useBoard() {
     setCards(previous => previous.map(item => item.id === card.id ? data as BoardCard : item));
     return data as BoardCard;
   }
-  async function saveProject(name: string, project?: BoardProject, archived_at?: string | null) {
+  async function saveProject(input: string | ReturnType<typeof projectDetailsInput.parse>, project?: BoardProject, archived_at?: string | null) {
     if (!client || !userId) throw new Error('Sign in to save a project.');
-    const query = project ? client.from('board_projects').update({ name, ...(archived_at !== undefined ? { archived_at } : {}) }).eq('id', project.id).eq('user_id', userId).eq('updated_at', project.updated_at) : client.from('board_projects').insert({ name, user_id: userId });
+    const details = typeof input === 'string' ? { name: input } : projectDetailsInput.parse(input);
+    const query = project ? client.from('board_projects').update({ ...details, ...(archived_at !== undefined ? { archived_at } : {}) }).eq('id', project.id).eq('user_id', userId).eq('updated_at', project.updated_at) : client.from('board_projects').insert({ ...details, user_id: userId });
     const { data, error } = await query.select('*').maybeSingle();
     if (error) throw error;
     if (!data) throw new Error('This project changed in another tab. Reload before saving.');
     setProjects(previous => project ? previous.map(item => item.id === project.id ? data as BoardProject : item) : [...previous, data as BoardProject]);
+    return data as BoardProject;
   }
   async function deleteCard(card: BoardCard) {
     if (!client || !userId) throw new Error('Sign in to delete a card.');

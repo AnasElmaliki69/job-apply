@@ -8,7 +8,7 @@ function storage() {
   return { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => { values.set(key, value); } };
 }
 function saved(): BoardMemory {
-  return { ...emptyBoardMemory(), filters: { ...emptyBoardMemory().filters, view: 'project', project, search: 'Exam', status: 'open', due: 'today' }, filtersOpen: true, projectsOpen: true, captureOpen: true, scrollY: 840, draft: { title: 'Plan a study session', type: 'task', category: 'Studies', body: 'Review chapter 3', project_id: project, due_date: '2026-10-20' } };
+  return { ...emptyBoardMemory(), filters: { ...emptyBoardMemory().filters, view: 'project', project, search: 'Exam', status: 'open', due: 'today' }, filtersOpen: true, projectsOpen: true, captureOpen: true, scrollY: 840, draft: { title: 'Plan a study session', type: 'task', category: 'Studies', body: 'Review chapter 3', project_id: project, due_date: '2026-10-20', format: 'text', url: '' } };
 }
 test('returning to Board restores the project, filters, panel state, scroll and complete draft', () => {
   const session = storage(); const memory = saved();
