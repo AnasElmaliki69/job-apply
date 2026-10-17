@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, type FormEvent } from 'react';
-import { CardForm } from './board';
+import { CardForm } from './card-form';
 import { useBoard } from './use-board';
 import { DeleteBoardCard } from './delete-board-card';
 import { Feedback, Heading, Loading } from './ui';
@@ -29,12 +29,14 @@ function SolutionForm({ solution, busy, onSave, onCancel }: { solution?: BoardSo
   </fieldset></form>;
 }
 
-export default function BoardDetail({ id }: { id: string }) {
+export default function BoardDetail({ id, fromProject }: { id: string; fromProject?: string }) {
   const router = useRouter();
   const board = useBoard(); const card = board.cards.find(card => card.id === id);
   const [solutions, setSolutions] = useState<BoardSolution[]>([]); const [solutionsLoading, setSolutionsLoading] = useState(false); const [solutionsError, setSolutionsError] = useState(''); const [attempt, setAttempt] = useState(0);
   const [editing, setEditing] = useState<string | null>(null); const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const [notice, setNotice] = useState('');
   const isProblem = card?.type === 'problem';
+  const returnProject = board.projects.find(project => project.id === fromProject);
+  const back = returnProject ? `/board/projects/${returnProject.id}` : '/board';
   useEffect(() => {
     if (!board.client || !board.userId || !isProblem) return;
     let active = true; setSolutionsLoading(true); setSolutionsError(''); setSolutions([]);
@@ -56,11 +58,11 @@ export default function BoardDetail({ id }: { id: string }) {
   if (board.error) return <><Feedback error={board.error}/><button className="secondary" onClick={board.retry}>Retry</button></>;
   if (!card) return <div className="card"><h1 className="text-xl font-semibold">Card not found</h1><p className="my-4 text-sm text-slate-500">It may belong to a different account.</p><Link className="secondary" href="/board">Back to Board</Link></div>;
   return <>
-    <Link href="/board" className="mb-5 inline-block text-sm font-medium text-indigo-600">← Back to Board</Link>
+    <Link href={back} className="mb-5 inline-block text-sm font-medium text-indigo-600">← {returnProject ? `Back to ${returnProject.name}` : 'Back to Board'}</Link>
     <Heading title={card.type === 'problem' ? 'Problem details' : 'Card details'} subtitle="Keep your notes and progress together."/>
     <Feedback error={error} notice={notice}/>
     <div className="mb-5 flex flex-wrap items-center gap-3"><span className={`rounded-full px-3 py-1 text-sm capitalize ${typeColors[card.type]}`}>{card.type}</span><span className="font-medium">{card.status === 'completed' ? 'Done' : card.status === 'resolved' ? 'Resolved' : 'Open'}</span>{card.archived_at && <span className="text-sm text-slate-500">Archived</span>}<button className="secondary" disabled={busy} onClick={() => void act(() => board.updateCard(card, { status: completionStatus(card) }), 'Status updated.')}>{card.status !== 'open' ? 'Reopen' : isProblem ? 'Mark resolved' : 'Mark done'}</button><button className="secondary" disabled={busy} onClick={() => void act(() => board.updateCard(card, { archived_at: card.archived_at ? null : new Date().toISOString() }), 'Archive status updated.')}>{card.archived_at ? 'Restore card' : 'Archive card'}</button></div>
-    <div className="mb-5"><DeleteBoardCard card={card} busy={busy} onDelete={() => act(async () => { await board.deleteCard(card); router.replace('/board'); }, 'Card permanently deleted.')}/></div>
+    <div className="mb-5"><DeleteBoardCard card={card} busy={busy} onDelete={() => act(async () => { await board.deleteCard(card); router.replace(back); }, 'Card permanently deleted.')}/></div>
     <section className="card mb-6"><CardForm key={`${card.id}:${card.updated_at}`} card={card} projects={board.projects} busy={busy} onSave={input => act(() => board.updateCard(card, input), 'Card updated.')}/><p className="mt-4 text-xs text-slate-500">Created {new Date(card.created_at).toLocaleString()} · Updated {new Date(card.updated_at).toLocaleString()}</p></section>
     {isProblem && <section aria-label="Problem solutions" className="space-y-5">
       <div><h2 className="text-xl font-semibold">Solutions and attempts</h2><p className="mt-2 text-sm text-slate-500">Add possibilities now. Record what you tried and what happened later. Outcomes do not automatically resolve the problem.</p></div>
