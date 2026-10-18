@@ -4,8 +4,10 @@ A personal workspace for job applications, everyday organization and self-testin
 Built with Next.js App Router, TypeScript, Tailwind CSS, Supabase and Gemini.
 The interface and newly generated study quizzes are in English. Generated CVs and cover letters are in French.
 
-This guide sets up the **`main` branch** on your own computer.
-It includes applications, Board and Projects, Explore offers, Study, and light/dark themes.
+This guide sets up the website on your own computer. On this feature branch,
+follow [GitHub activity setup](docs/github-project-activity.md) for the optional
+Projects integration. It includes applications, Board and Projects, Explore
+offers, Study, and light/dark themes.
 
 ## What you need
 
@@ -116,6 +118,7 @@ alphabetical filename order.
 | 4 | [202610140001_explore_offers.sql](supabase/migrations/202610140001_explore_offers.sql) | Search preferences and saved/dismissed offers |
 | 5 | [202610140002_study_quizzes.sql](supabase/migrations/202610140002_study_quizzes.sql) | Subjects, material, quizzes, attempts and scoring functions |
 | 6 | [202610170001_board_projects_workspace.sql](supabase/migrations/202610170001_board_projects_workspace.sql) | Project goals, links and context; card formats for links, code and decisions |
+| 7 | [202610180001_project_github_activity.sql](supabase/migrations/202610180001_project_github_activity.sql) | Optional GitHub account connection, project repository links and secure OAuth/refresh state |
 
 These scripts create indexes, table permissions and row-level security (RLS).
 Do not disable RLS to fix a setup error. It keeps each account's data private.
@@ -412,6 +415,26 @@ selection is remembered across visits. Dark mode uses charcoal surfaces with
 restrained green accents and readable, distinct status colors. Native dropdowns
 share the same spacing and focus styles across the app. See [theme details and
 browser checks](docs/themes.md). No new environment variables or SQL are required.
+
+## Optional: GitHub commit activity in Projects
+
+Follow the step-by-step [GitHub App setup guide](docs/github-project-activity.md).
+For an existing database, run only
+[202610180001_project_github_activity.sql](supabase/migrations/202610180001_project_github_activity.sql)
+after the Board project workspace migration. The updated
+[setup-database.txt](supabase/setup-database.txt) includes it for **new empty databases**.
+The SQL is in those files, not this README.
+
+Register a GitHub App with **Contents: Read-only** and **Metadata: Read-only**, and
+set the six server-only `GITHUB_` variables shown in `.env.example`. The guide
+explains the callback/setup URLs, client secret and encryption key generation.
+No PAT, service-role key, GitHub App private key, or desktop app is needed.
+
+Open a project, use **Connect GitHub**, grant access to selected repositories on
+GitHub, then **Choose repository**. Activity shows recent default-branch commits
+and a manual Refresh. Change/remove the link or disconnect anytime. Activity
+does not change cards, tasks or project progress. Real authorization/installation
+requires your GitHub App registration; it cannot be verified using placeholder keys.
 
 ## Troubleshooting
 
