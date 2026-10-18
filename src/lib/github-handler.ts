@@ -107,10 +107,13 @@ export async function handleGithub(request:NextRequest) {
       return reply({linked:true});
     }
     if (action==='activity' && request.method==='GET') {
+      const page=parsed(z.coerce.number().int().min(1).max(10000),request.nextUrl.searchParams.get('page')??1);
+      const head=parsed(z.string().regex(/^[a-f0-9]{40,64}$/i).optional(),request.nextUrl.searchParams.get('head')??undefined);
+      if (page>1 && !head) throw new GithubError('Refresh activity before loading more commits.',400,'invalid');
       const link=await client.from('project_github_repositories').select('installation_id,repository_id').eq('project_id',projectId).eq('user_id',userId).maybeSingle();dbError(link.error);
-      if (!link.data) return reply({repository:null,commits:[],checkedAt:new Date().toISOString()});
+      if (!link.data) return reply({repository:null,commits:[],checkedAt:new Date().toISOString(),page,hasMore:false,head:null});
       const repo=await permittedRepository(token,link.data.installation_id,link.data.repository_id);
-      return reply({repository:repo,commits:await recentCommits(token,repo),checkedAt:new Date().toISOString()});
+      return reply({repository:repo,...await recentCommits(token,repo,page,head),page,checkedAt:new Date().toISOString()});
     }
     return reply({error:'GitHub endpoint not found.'},404);
   } catch (error) {

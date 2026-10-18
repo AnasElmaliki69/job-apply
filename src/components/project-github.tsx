@@ -75,6 +75,19 @@ function Activity({projectId,token}:{projectId:string;token:string}) {
       if (first) await loadRepos(String(first.id));
     });
   }
+  async function showMore() {
+    if (!activity?.repository || !activity.head || !activity.hasMore) return;
+    const previous=activity;
+    await run('Loading more commits…',async()=>{
+      const next=await api<GithubActivity>('activity','GET',undefined,{page:String(previous.page+1),head:previous.head!});
+      if (!active.current) return;
+      if (next.repository?.id!==previous.repository!.id || next.repository?.branch!==previous.repository!.branch) {
+        await load();setNotice('The linked repository or default branch changed. Showing its latest commits.');return;
+      }
+      const seen=new Set(previous.commits.map(commit=>commit.sha));
+      setActivity({...next,commits:[...previous.commits,...next.commits.filter(commit=>!seen.has(commit.sha))]});
+    });
+  }
   const disabled=!!busy;
   return <section aria-labelledby="github-activity-title" className="card mb-6" aria-busy={disabled}>
     <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
@@ -82,7 +95,7 @@ function Activity({projectId,token}:{projectId:string;token:string}) {
       <button ref={focus} className="secondary" disabled={disabled} onClick={()=>void run('Refreshing GitHub…',load)}><RefreshCw size={15} aria-hidden="true"/>Refresh</button>
     </div>
     <Feedback error={error} notice={notice}/>
-    {busy && <Loading>{busy}</Loading>}
+    {busy && busy!=='Loading more commits…' && <Loading>{busy}</Loading>}
     {!connection && !busy && <p className="mb-3 text-sm text-slate-500">Use Refresh to load the GitHub connection.</p>}
     {connection && !connection.configured && <p className="text-sm text-slate-500">GitHub is not configured on this website yet. Ask the administrator to follow the GitHub App setup guide in the README.</p>}
     {connection?.configured && <>
@@ -115,7 +128,8 @@ function Activity({projectId,token}:{projectId:string;token:string}) {
         {activity?.repository && <div>
           <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm"><a className="inline-flex min-h-11 items-center gap-1 break-all font-medium text-indigo-700 underline" href={activity.repository.url} target="_blank" rel="noopener noreferrer">{activity.repository.fullName}<ExternalLink size={13}/></a><span className="inline-flex items-center gap-1 text-slate-600"><GitBranch size={14} aria-hidden="true"/>Default branch: <strong className="break-all">{activity.repository.branch}</strong></span><span className="text-xs text-slate-500">{activity.repository.private?'Private repository':'Public repository'}</span></div>
           {!activity.commits.length ? <p className="text-sm text-slate-500">No commits on this branch yet.</p> : <ol className="divide-y divide-slate-100">{activity.commits.map(commit=><li key={commit.sha} className="py-3 first:pt-0"><a className="inline-flex min-h-11 max-w-full items-center gap-2 break-words text-sm font-medium text-indigo-700 underline underline-offset-4" href={commit.url} target="_blank" rel="noopener noreferrer"><span>{commit.message.split('\n')[0]||'Untitled commit'}</span><ExternalLink size={13} className="shrink-0"/></a><p className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500"><span className="break-words">{commit.author}</span>{commit.date && <time dateTime={commit.date}>{new Date(commit.date).toLocaleString()}</time>}<span className="font-mono">{commit.sha.slice(0,7)}</span></p></li>)}</ol>}
-          <p className="mt-3 text-xs text-slate-400">Up to 20 recent commits. Updated {new Date(activity.checkedAt).toLocaleTimeString()}. Refresh checks current access.</p>
+          {activity.hasMore && <button type="button" className="secondary mt-4" disabled={disabled} onClick={()=>void showMore()}>{busy==='Loading more commits…'?'Loading more…':'Show more'}</button>}
+          <p className="mt-3 text-xs text-slate-400" role="status">Showing {activity.commits.length} commits. Updated {new Date(activity.checkedAt).toLocaleTimeString()}. Refresh returns to the latest 6.</p>
         </div>}
       </>}
       {reconnect && connection.connected && <button className="secondary mt-3" disabled={disabled} onClick={()=>void run('Disconnecting GitHub…',async()=>{const value=await api<{notice:string}>('connection','DELETE');if(active.current){setConnection({configured:true,connected:false});setReconnect(false);setActivity(null);setChoosing(false);setNotice(value.notice);}})}>Disconnect GitHub</button>}

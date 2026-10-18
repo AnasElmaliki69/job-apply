@@ -1,7 +1,8 @@
 # Project GitHub activity setup
 
-This optional **website** integration reads up to 20 recent commits from a linked
-repository's current default branch. It never writes to GitHub, creates Board
+This optional **website** integration initially reads 6 recent commits from a linked
+repository's current default branch. **Show more** loads another 6 at a time.
+It never writes to GitHub, creates Board
 cards, changes tasks, or changes progress. Private repositories are supported.
 
 While this feature is unmerged, use branch `feature/project-github-activity`.
@@ -104,7 +105,10 @@ On Windows PowerShell, use `npm.cmd` if `npm.ps1` is blocked.
    then **Link repository**. The native dropdown supports keyboard and touch.
    **More accounts/repositories** loads subsequent pages if necessary.
 6. The section shows the default branch, commit messages, authors, dates and GitHub
-   links. **Refresh** fetches current access, branch and commits; there is no polling.
+   links. **Show more** appends 6 older commits and disappears at the end of history.
+   Subsequent pages stay anchored to the initial latest commit so new pushes do not
+   shift pagination. Every page rechecks access. **Refresh** fetches current access,
+   branch and commits, resetting the list to the latest 6; there is no polling.
 7. Use **Change repository** or **Remove repository link** later. The existing
    project-context “Git repository” URL remains an ordinary independent link;
    pasting a URL does not grant access or automatically link a repository.
@@ -173,7 +177,8 @@ After registering the App/applying SQL, test in a desktop and mobile browser:
 
 - Connect, deny authorization, retry, and try an expired/replayed callback.
 - Install on selected public/private repositories; link, change, remove and reload.
-- Verify branch and 20 latest commits against GitHub, including an empty repo and
+- Verify branch and 6 latest commits against GitHub, Show more through multiple
+  pages and the end of history, Refresh resets to 6, including an empty repo and
   a changed default branch; keyboard-tab through the native selectors and buttons.
 - Remove repository access, suspend/uninstall the App or revoke authorization on
   GitHub, then Refresh; previous activity must disappear with an access error.

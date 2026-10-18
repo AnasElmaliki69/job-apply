@@ -154,11 +154,14 @@ export async function permittedRepository(token:string,installationId:number,rep
   }
   throw new GithubError('Repository is no longer selected or accessible. Choose a permitted repository again.',403,'access_lost');
 }
-export async function recentCommits(token:string,repo:GithubRepository):Promise<GithubCommit[]> {
+export async function recentCommits(token:string,repo:GithubRepository,page=1,head?:string):Promise<{commits:GithubCommit[];hasMore:boolean;head:string|null}> {
   try {
-    const data=await (await githubFetch(`/repos/${repo.fullName.split('/').map(encodeURIComponent).join('/')}/commits?${new URLSearchParams({sha:repo.branch,per_page:'20'})}`,token)).json();
+    // Later pages stay anchored to the first commit so new pushes do not shift them.
+    const response=await githubFetch(`/repos/${repo.fullName.split('/').map(encodeURIComponent).join('/')}/commits?${new URLSearchParams({sha:head??repo.branch,per_page:'6',page:String(page)})}`,token);
+    const data=await response.json();
     const parsed=z.array(z.object({sha:z.string().regex(/^[a-f0-9]{40,64}$/i),commit:z.object({message:z.string(),author:z.object({name:z.string().nullable(),date:z.string().nullable()}).nullable()}),author:z.object({login:z.string()}).nullable()})).safeParse(data);
     if (!parsed.success) throw new GithubError('GitHub returned unreadable commit data.');
-    return parsed.data.map(item=>({sha:item.sha,message:item.commit.message.slice(0,4000),author:item.commit.author?.name||item.author?.login||'Unknown author',date:item.commit.author?.date && Number.isFinite(Date.parse(item.commit.author.date))?item.commit.author.date:null,url:`${repo.url}/commit/${item.sha}`}));
-  } catch (error) {if (error instanceof GithubError && error.code==='empty') return [];throw error;}
+    const commits=parsed.data.map(item=>({sha:item.sha,message:item.commit.message.slice(0,4000),author:item.commit.author?.name||item.author?.login||'Unknown author',date:item.commit.author?.date && Number.isFinite(Date.parse(item.commit.author.date))?item.commit.author.date:null,url:`${repo.url}/commit/${item.sha}`}));
+    return {commits,hasMore:/rel="next"/.test(response.headers.get('link')??''),head:head??commits[0]?.sha??null};
+  } catch (error) {if (error instanceof GithubError && error.code==='empty') return {commits:[],hasMore:false,head:null};throw error;}
 }

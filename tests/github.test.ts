@@ -102,13 +102,37 @@ test('Activity uses the selected private repository and explicit current default
     if(url.includes('/user/installations?'))return Response.json({total_count:1,installations:[installation]});
     if(url.includes('/user/installations/12/repositories'))return Response.json({total_count:1,repositories:[repository]});
     if(url.includes('/repositories/101'))return Response.json({...repository,default_branch:'new-default'});
-    assert.match(url,/sha=new-default/);
+    assert.match(url,/sha=new-default/);assert.equal(new URL(url).searchParams.get('per_page'),'6');
     return Response.json([{sha:'a'.repeat(40),commit:{message:'Build project\nDetails',author:{name:'Student',date:'2026-10-18T10:00:00Z'}},author:{login:'student'}}]);
   });
   const response=await handleGithub(request('activity'));assert.equal(response.status,200);
   const value=await response.json();assert.equal(value.repository.private,true);assert.equal(value.repository.branch,'new-default');assert.equal(value.commits[0].author,'Student');
+  assert.equal(value.page,1);assert.equal(value.hasMore,false);assert.equal(value.head,'a'.repeat(40));
   assert.equal(value.commits[0].url,`https://github.com/student/private-repo/commit/${'a'.repeat(40)}`);assert.match(response.headers.get('cache-control')!,/no-store/);
   assert.ok(!JSON.stringify(value).includes(credentials.accessToken));assert.ok(calls.every(url=>!url.includes('board_cards')));
+}));
+test('Show more reads six older commits anchored to the original head and rechecks repository access on every page',()=>fixture(async()=>{
+  const head='a'.repeat(40);let commitsRequested=0,accessChecks=0;
+  mock(url=>{
+    if(url.includes('/github_connections'))return Response.json(row());
+    if(url.includes('/project_github_repositories'))return Response.json({installation_id:12,repository_id:101});
+    if(url.includes('/user/installations?')){accessChecks++;return Response.json({total_count:1,installations:[installation]});}
+    if(url.includes('/user/installations/12/repositories'))return Response.json({total_count:1,repositories:[repository]});
+    if(url.includes('/repositories/101'))return Response.json(repository);
+    const params=new URL(url).searchParams,page=Number(params.get('page'));
+    assert.equal(params.get('sha'),head);assert.equal(params.get('per_page'),'6');assert.ok(page===2||page===3);commitsRequested++;
+    const commits=Array.from({length:page===2?6:2},(_,i)=>({sha:(page*6+i).toString(16).padStart(40,'0'),commit:{message:`Older ${page}/${i}`,author:{name:'Student',date:null}},author:null}));
+    return Response.json(commits,{headers:page===2?{link:'<https://api.github.com/commits?page=3>; rel="next"'}:{}});
+  });
+  const second=await handleGithub(request('activity','GET',undefined,undefined,`&page=2&head=${head}`));assert.equal(second.status,200);
+  const page2=await second.json();assert.equal(page2.page,2);assert.equal(page2.commits.length,6);assert.equal(page2.hasMore,true);assert.equal(page2.head,head);
+  const third=await handleGithub(request('activity','GET',undefined,undefined,`&page=3&head=${head}`));
+  const page3=await third.json();assert.equal(page3.commits.length,2);assert.equal(page3.hasMore,false);assert.equal(accessChecks,2);assert.equal(commitsRequested,2);
+  assert.equal(new Set([...page2.commits,...page3.commits].map(commit=>commit.sha)).size,8);
+}));
+test('Activity rejects malformed or unanchored pagination before reading GitHub',()=>fixture(async()=>{
+  mock(url=>{assert.match(url,/github_connections/);return Response.json(row());});
+  for(const query of ['&page=0','&page=2','&page=2&head=bad-sha','&page=1.5'])assert.equal((await handleGithub(request('activity','GET',undefined,undefined,query))).status,400);
 }));
 test('Removed installations and unselected repositories deny activity, even if a repository is publicly readable',()=>fixture(async()=>{
   let installationsPresent=false;
@@ -133,7 +157,7 @@ test('Repository pagination reaches later pages without silently dropping permit
 }));
 test('Empty repositories, revoked access, rate limits and GitHub errors have safe distinct states',()=>fixture(async()=>{
   const repo={id:101,name:'private-repo',fullName:'student/private-repo',private:true,branch:'main',url:'https://github.com/student/private-repo'};
-  globalThis.fetch=async()=>new Response('private provider content',{status:409});assert.deepEqual(await recentCommits('token',repo),[]);
+  globalThis.fetch=async()=>new Response('private provider content',{status:409});assert.deepEqual(await recentCommits('token',repo),{commits:[],hasMore:false,head:null});
   for(const [status,code] of [[401,'reconnect'],[403,'access_lost'],[404,'access_lost'],[429,'rate_limit'],[500,'github_error']] as const){
     globalThis.fetch=async()=>new Response('private provider content',{status});
     await assert.rejects(recentCommits('token',repo),(error:unknown)=>error instanceof GithubError && error.code===code && !error.message.includes('private provider'));
