@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "capture",
+  "description": "Local capture UI can receive focus events. Privileged actions use narrow Rust commands.",
+  "windows": ["capture"],
+  "permissions": ["core:event:allow-listen", "core:event:allow-unlisten"]
+}

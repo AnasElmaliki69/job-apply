@@ -9,6 +9,10 @@ It includes applications, Board and Projects, Explore offers, Study, and light/d
 
 ## What you need
 
+For the optional Windows tray/global-shortcut companion, see the separate
+[Quick Capture setup guide](desktop/quick-capture/README.md). The website setup
+below stays the same; the companion uses the existing Board database and account.
+
 | Requirement | Purpose |
 | --- | --- |
 | [Node.js 24](https://nodejs.org/en/download) with npm | Runs the app; matches the repository's CI configuration |
