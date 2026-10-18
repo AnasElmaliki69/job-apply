@@ -5,8 +5,8 @@ repository's current default branch. **Show more** loads another 6 at a time.
 It never writes to GitHub, creates Board
 cards, changes tasks, or changes progress. Private repositories are supported.
 
-While this feature is unmerged, use branch `feature/project-github-activity`.
-Preserve local work before switching; the desktop companion is on its separate branch.
+This website feature is included in `main`. The desktop companion stays on
+`feature/windows-quick-capture`.
 
 ## 1. Apply the database migration
 
@@ -25,10 +25,13 @@ No service-role key or separate Supabase GitHub login provider is required.
 
 1. Open [GitHub → Settings → Developer settings → GitHub Apps → New GitHub App](https://github.com/settings/apps/new).
    Register a **GitHub App**, rather than an OAuth App.
-2. Give it a unique name (for example, `YourName JobApply Activity`) and a homepage
-   URL for your website. GitHub shows its slug on its public page.
-3. Set **User authorization callback URL** to
-   `http://localhost:3000/api/github/callback` for local development.
+2. Give it a unique name (for example, `YourName JobApply Activity`) and set
+   **Homepage URL** to `http://localhost:3000` for local development.
+   GitHub shows its slug on its public page.
+3. Under **Identifying and authorizing users**, click **Add redirect URI** and set
+   **Redirect URI** (also called the user authorization callback URL) to
+   `http://localhost:3000/api/github/callback`. Filling Homepage URL or Setup URL
+   does not fill this field. Save the settings after editing an existing App.
 4. Leave **Request user authorization (OAuth) during installation** **unchecked**.
    The website explicitly starts authorization with its own state and PKCE.
 5. Set **Setup URL** to that same `http://localhost:3000/api/github/callback`.
@@ -44,8 +47,9 @@ No service-role key or separate Supabase GitHub login provider is required.
 9. For installations only on your account, choose **Only on this account**. To let
    other users install it on their accounts/organizations, choose **Any account**.
    Organization installation may need an organization's administrator approval.
-10. Create the App. Copy its **App ID** and **Client ID**, then **Generate a new
-    client secret** and store it securely. This implementation uses user access
+10. Create the App. Copy its **App ID** and **Client ID**, then open the
+    **Credentials** tab in the left sidebar and click **Generate a new client
+    secret**. Store it securely. This implementation uses user access
     tokens; it needs **no GitHub App private key**, installation token, or PAT.
 
 For a hosted website, use its exact **HTTPS** origin in both callback and setup

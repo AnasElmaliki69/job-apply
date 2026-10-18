@@ -4,8 +4,8 @@ A personal workspace for job applications, everyday organization and self-testin
 Built with Next.js App Router, TypeScript, Tailwind CSS, Supabase and Gemini.
 The interface and newly generated study quizzes are in English. Generated CVs and cover letters are in French.
 
-This guide sets up the website on your own computer. On this feature branch,
-follow [GitHub activity setup](docs/github-project-activity.md) for the optional
+This guide sets up the website from `main` on your own computer.
+Follow [GitHub activity setup](docs/github-project-activity.md) for the optional
 Projects integration. It includes applications, Board and Projects, Explore
 offers, Study, and light/dark themes.
 

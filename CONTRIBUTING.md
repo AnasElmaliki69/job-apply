@@ -2,8 +2,14 @@
 
 ## Branch workflow
 
-`main` is the single maintained branch and contains the latest app version.
-Keep changes focused and run the checks below before pushing to `main`.
+The repository maintains two branches:
+
+- `main` contains the latest website features.
+- `feature/windows-quick-capture` contains the separate desktop companion.
+
+Keep website changes focused and run the checks below before merging to `main`.
+Remove website feature branches after their work has been merged. Keep the desktop
+companion branch separate from `main`.
 
 Use focused commits with clear messages, such as `feat: add structured CV entries`,
 `fix: wrap long experience titles`, or `docs: clarify local setup`.
