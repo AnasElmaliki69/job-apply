@@ -16,18 +16,21 @@ export async function POST(request: Request) {
     let body: unknown;
     try { body = await request.json(); } catch { return reply({ error: 'Send valid quiz settings.' },400); }
     const parsed = generateQuizSchema.safeParse(body);
-    if (!parsed.success) return reply({ error: 'Choose saved study material and 5 or 10 questions.' },400);
+    if (!parsed.success) return reply({ error: 'Choose saved study material, 5 or 10 questions, and Easy, Medium or Hard difficulty.' },400);
     const material = await client.from('study_materials').select('subject_id,topic,content').eq('id',parsed.data.materialId).eq('user_id',data.user.id).maybeSingle();
     if (material.error) return reply({ error: 'Could not load study material. Check the Study SQL migration.' },500);
     if (!material.data) return reply({ error: 'Study material not found. Save your notes first.' },404);
     const source = materialSchema.safeParse(material.data);
     if (!source.success) return reply({ error: 'Add a topic and 50–20,000 characters of study material.' },400);
+    // Fail before spending Gemini quota if the difficulty migration is missing.
+    const support=await client.from('study_quizzes').select('difficulty').eq('user_id',data.user.id).limit(0);
+    if (support.error) return reply({error:'Quiz difficulty is not ready. Apply 202611030001_study_quiz_difficulty.sql in Supabase SQL Editor, then reload Study.'},503);
     if (!process.env.GEMINI_API_KEY) return reply({ error: 'Add GEMINI_API_KEY to .env.local and restart the app.' },503);
     const reserve = await client.rpc('study_reserve_generation');
     if (reserve.error) return reply({ error: 'Could not prepare generation. Check the Study SQL migration.' },500);
     if (!reserve.data) return reply({ error: 'Please wait 30 seconds between quiz generations. You can retry a saved quiz immediately.' },429);
-    const questions = await generateStudyQuiz(source.data.topic,source.data.content,parsed.data.count);
-    const saved = await client.rpc('study_create_quiz',{ p_material_id: parsed.data.materialId, p_questions: questions });
+    const questions = await generateStudyQuiz(source.data.topic,source.data.content,parsed.data.count,parsed.data.difficulty);
+    const saved = await client.rpc('study_create_quiz',{ p_material_id: parsed.data.materialId, p_questions: questions,p_difficulty:parsed.data.difficulty });
     if (saved.error || !saved.data) return reply({ error: 'The generated quiz could not be saved. Your material is safe. Check your connection before generating again.' },500);
     // Never include the answer key or explanations in the generation response.
     return reply({ id: saved.data });

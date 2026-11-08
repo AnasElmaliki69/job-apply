@@ -119,6 +119,8 @@ alphabetical filename order.
 | 5 | [202610140002_study_quizzes.sql](supabase/migrations/202610140002_study_quizzes.sql) | Subjects, material, quizzes, attempts and scoring functions |
 | 6 | [202610170001_board_projects_workspace.sql](supabase/migrations/202610170001_board_projects_workspace.sql) | Project goals, links and context; card formats for links, code and decisions |
 | 7 | [202610180001_project_github_activity.sql](supabase/migrations/202610180001_project_github_activity.sql) | Optional GitHub account connection, project repository links and secure OAuth/refresh state |
+| 8 | [202611020001_study_subject_delete.sql](supabase/migrations/202611020001_study_subject_delete.sql) | Owner-only subject deletion, including its material, quizzes and scores |
+| 9 | [202611030001_study_quiz_difficulty.sql](supabase/migrations/202611030001_study_quiz_difficulty.sql) | Easy, Medium and Hard quiz levels saved with each quiz |
 
 These scripts create indexes, table permissions and row-level security (RLS).
 Do not disable RLS to fix a setup error. It keeps each account's data private.
@@ -369,13 +371,48 @@ the database, including any copied into application offer text, as required.
 
 1. Open **Study**, create a subject and select it.
 2. Enter a topic and paste 50–20,000 characters of notes or a summary. Save material.
-3. Open that material, choose **5** or **10** questions and click **Generate quiz**.
+3. Open that material, choose **5** or **10** questions and a difficulty level,
+   then click **Generate quiz**. Medium is the default.
 4. Choose an answer or **I'm not sure** for every question, then submit the whole quiz.
 5. Read your score, correct answers, explanations and supporting excerpts.
 6. Use **Review again** for wrong/unsure questions, or retry a saved quiz and compare
    previous scores. Retrying uses no Gemini call.
+7. After a quiz, click **Add new material** on the results page to return to that
+   subject's new-material form. You can also add material from any saved material
+   page, or directly in Study. Save the new topic and notes, open that entry, and
+   generate a quiz on **only those new notes**. Previous material, quizzes and scores
+   remain available. Adding material does not automatically call Gemini.
+8. To delete a subject, click its trash button in **Subjects**, type its name in the
+   confirmation dialog, then confirm. This permanently deletes **all** material,
+   quizzes, scores and review mistakes in that subject. Other subjects are kept.
+   Apply [202611020001_study_subject_delete.sql](supabase/migrations/202611020001_study_subject_delete.sql)
+   in Supabase SQL Editor first; existing installations run this migration only,
+   while new empty databases can use the updated `setup-database.txt`.
 
 New quizzes, answer options, explanations and review-topic labels are generated in English, even from notes in another language. Supporting excerpts keep the source language. Previously saved quizzes keep their original text; generate a new quiz from the same material to use English.
+
+Choose a level to match your study goal:
+
+- **Easy:** memorization of key facts, definitions and basic steps.
+- **Medium:** understanding relationships, comparisons, causes and effects.
+- **Hard:** precise details, qualifications, conditions and connections between facts,
+  with closely matched answer options. Hard should test deeper recall and reasoning,
+  not confusing English or trick questions. All required details must come from your
+  notes. Paste richer notes if you want more detailed questions; the app does not
+  invent missing facts or fetch extra course content.
+
+Each new quiz saves its chosen level and displays it in the quiz list and quiz page.
+Retrying keeps the same questions and level; choose another level and generate a
+new quiz for a different challenge. Older quizzes are labelled **Original quiz**,
+with no retroactive difficulty assignment. Difficulty changes the generation
+instructions; it is an AI estimate rather than a calibrated exam standard.
+
+For an existing installation, run
+[202611030001_study_quiz_difficulty.sql](supabase/migrations/202611030001_study_quiz_difficulty.sql)
+in Supabase SQL Editor before generating new quizzes. It preserves all existing
+questions, attempts and scores. New empty databases can use the updated
+`setup-database.txt`. The generation route checks migration readiness before
+spending Gemini quota. Each difficulty still makes only one Gemini request.
 
 One explicit generation makes one Gemini request. A 30-second per-user cooldown
 limits repeated generation clicks; it is separate from Google's project-wide quota.
